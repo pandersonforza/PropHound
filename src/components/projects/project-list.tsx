@@ -1,0 +1,169 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { type ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "@/components/shared/data-table";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { CurrencyDisplay } from "@/components/shared/currency-display";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ProjectForm } from "@/components/projects/project-form";
+import { useToast } from "@/components/ui/toast";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import type { Project } from "@/types";
+
+interface ProjectListProps {
+  projects: Project[];
+  onMutate: () => void;
+}
+
+export function ProjectList({ projects, onMutate }: ProjectListProps) {
+  const [formOpen, setFormOpen] = useState(false);
+  const [editProject, setEditProject] = useState<Project | undefined>();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await fetch(`/api/projects/${deleteId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete project");
+      toast({ title: "Project deleted" });
+      onMutate();
+    } catch {
+      toast({ title: "Error", description: "Failed to delete project", variant: "destructive" });
+    }
+  };
+
+  const columns: ColumnDef<Project, unknown>[] = [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => (
+        <Link
+          href={`/projects/${row.original.id}`}
+          className="font-medium text-primary hover:underline"
+        >
+          {row.original.name}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "tenant",
+      header: "Tenant",
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      accessorKey: "stage",
+      header: "Stage",
+      cell: ({ row }) => <StatusBadge status={row.original.stage} type="stage" />,
+    },
+    {
+      accessorKey: "totalBudget",
+      header: "Budget",
+      cell: ({ row }) => <CurrencyDisplay amount={row.original.totalBudget} />,
+    },
+    {
+      id: "percentSpent",
+      header: "% Spent",
+      cell: ({ row }) => {
+        const budget = row.original.totalBudget;
+        const pct = budget > 0 ? 0 : 0; // Actual cost not on list view; shows 0 placeholder
+        return (
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-24 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full"
+                style={{ width: `${Math.min(pct, 100)}%` }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">{pct.toFixed(0)}%</span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "projectManager",
+      header: "Project Manager",
+    },
+    {
+      id: "actions",
+      header: "",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setEditProject(row.original);
+              setFormOpen(true);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setDeleteId(row.original.id);
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-3xl font-bold">Projects</h1>
+        <Button
+          onClick={() => {
+            setEditProject(undefined);
+            setFormOpen(true);
+          }}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New Project
+        </Button>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={projects}
+        searchKey="name"
+        searchPlaceholder="Search projects..."
+      />
+
+      <ProjectForm
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditProject(undefined);
+        }}
+        project={editProject}
+        onSuccess={onMutate}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete Project"
+        description="Are you sure you want to delete this project? This action cannot be undone and will remove all associated data."
+        onConfirm={handleDelete}
+        confirmLabel="Delete"
+      />
+    </div>
+  );
+}

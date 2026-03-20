@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String?
+  role         String   @default("user")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions          Session[]
+  assignedTasks     Task[]    @relation("TaskAssignee")
+  createdTasks      Task[]    @relation("TaskCreator")
+  approvedInvoices  Invoice[] @relation("InvoiceApprover")
+  submittedInvoices Invoice[] @relation("InvoiceSubmitter")
+  notes             Note[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  userId      String
+  createdById String?
+  title       String
+  description String?
+  status      String    @default("pending")
+  priority    String    @default("medium")
+  dueDate     DateTime?
+  projectId   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user      User     @relation("TaskAssignee", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdById])
+  @@index([projectId])
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  name           String
+  address        String
+  tenant         String?
+  status         String   @default("Active")
+  stage          String   @default("Pre-Development")
+  startDate      DateTime?
+  endDate        DateTime?
+  totalBudget    Float     @default(0)
+  projectManager String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  budgetCategories BudgetCategory[]
+  contracts        Contract[]
+  drawRequests     DrawRequest[]
+  documents        Document[]
+  invoices         Invoice[]
+  tasks            Task[]
+  notes            Note[]
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  projectId String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([authorId])
+}
+
+model BudgetCategory {
+  id            String @id @default(cuid())
+  projectId     String
+  name          String
+  categoryGroup String
+
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lineItems BudgetLineItem[]
+
+  @@index([projectId])
+}
+
+model BudgetLineItem {
+  id             String @id @default(cuid())
+  categoryId     String
+  description    String
+  originalBudget Float
+  revisedBudget  Float
+  committedCost  Float  @default(0)
+  actualCost     Float  @default(0)
+
+  category      BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  contracts     Contract[]
+  drawLineItems DrawLineItem[]
+  invoices      Invoice[]
+
+  @@index([categoryId])
+}
+
+model Vendor {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  company   String
+  category  String
+  status    String   @default("Active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contracts Contract[]
+}
+
+model Contract {
+  id         String    @id @default(cuid())
+  projectId  String
+  vendorId   String
+  lineItemId String?
+  title      String
+  amount     Float
+  type       String
+  status     String    @default("Draft")
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  project  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vendor   Vendor          @relation(fields: [vendorId], references: [id])
+  lineItem BudgetLineItem? @relation(fields: [lineItemId], references: [id])
+
+  @@index([projectId])
+  @@index([vendorId])
+}
+
+model DrawRequest {
+  id            String    @id @default(cuid())
+  projectId     String
+  drawNumber    Int
+  status        String    @default("Draft")
+  totalAmount   Float
+  submittedDate DateTime?
+  approvedDate  DateTime?
+  fundedDate    DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lineItems DrawLineItem[]
+  invoices  Invoice[]
+
+  @@unique([projectId, drawNumber])
+  @@index([projectId])
+}
+
+model DrawLineItem {
+  id               String @id @default(cuid())
+  drawRequestId    String
+  budgetLineItemId String
+  currentAmount    Float
+  previousDraws    Float
+  thisDrawAmount   Float
+
+  drawRequest    DrawRequest    @relation(fields: [drawRequestId], references: [id], onDelete: Cascade)
+  budgetLineItem BudgetLineItem @relation(fields: [budgetLineItemId], references: [id])
+
+  @@index([drawRequestId])
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  projectId  String
+  name       String
+  category   String
+  uploadDate DateTime @default(now())
+  notes      String?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model Invoice {
+  id               String    @id @default(cuid())
+  projectId        String?
+  budgetLineItemId String?
+  vendorName       String
+  invoiceNumber    String?
+  amount           Float
+  date             DateTime
+  description      String?
+  filePath         String
+  status           String    @default("Pending Review")
+  submittedBy      String?
+  approver         String?
+  approverId       String?
+  submittedById    String?
+  submittedDate    DateTime?
+  approvedDate     DateTime?
+  rejectedDate     DateTime?
+  paidDate         DateTime?
+  rejectionReason  String?
+  drawRequestId    String?
+  aiConfidence     Float?
+  aiNotes          String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  project         Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  lineItem        BudgetLineItem? @relation(fields: [budgetLineItemId], references: [id], onDelete: SetNull)
+  approverUser    User?           @relation("InvoiceApprover", fields: [approverId], references: [id])
+  submittedByUser User?           @relation("InvoiceSubmitter", fields: [submittedById], references: [id])
+  drawRequest     DrawRequest?    @relation(fields: [drawRequestId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([approverId])
+  @@index([drawRequestId])
+}

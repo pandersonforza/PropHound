@@ -1,0 +1,21 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionTokenFromCookie } from "@/lib/auth";
+
+export async function middleware(request: NextRequest) {
+  const token = getSessionTokenFromCookie(
+    request.headers.get("cookie")
+  );
+
+  if (!token) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Let the request through — full session validation happens in API routes
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|logo\\.svg|login|register|api/auth).*)",
+  ],
+};
