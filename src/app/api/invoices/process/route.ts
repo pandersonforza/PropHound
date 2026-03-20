@@ -201,8 +201,9 @@ Guidelines:
     return NextResponse.json(result);
   } catch (error) {
     console.error('Failed to process invoice:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to process invoice' },
+      { error: `Failed to process invoice: ${message}` },
       { status: 500 }
     );
   }

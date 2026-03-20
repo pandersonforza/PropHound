@@ -41,8 +41,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Failed to upload invoice file:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to upload file' },
+      { error: `Failed to upload file: ${message}` },
       { status: 500 }
     );
   }
