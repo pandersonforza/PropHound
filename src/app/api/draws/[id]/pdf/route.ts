@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { readFile } from 'fs/promises';
-import path from 'path';
 
 export async function GET(
   request: NextRequest,
@@ -207,8 +205,17 @@ export async function GET(
     for (const invoice of draw.invoices) {
       if (invoice.filePath) {
         try {
-          const absolutePath = path.join(process.cwd(), 'public', invoice.filePath);
-          const fileBytes = await readFile(absolutePath);
+          let fileBytes: Buffer;
+          if (invoice.filePath.startsWith('http')) {
+            const res = await fetch(invoice.filePath);
+            if (!res.ok) throw new Error('Failed to fetch');
+            fileBytes = Buffer.from(await res.arrayBuffer());
+          } else {
+            const { readFile } = await import('fs/promises');
+            const path = await import('path');
+            const absolutePath = path.join(process.cwd(), 'public', invoice.filePath);
+            fileBytes = await readFile(absolutePath);
+          }
 
           // Try to load as PDF
           const invoicePdf = await PDFDocument.load(fileBytes, { ignoreEncryption: true });

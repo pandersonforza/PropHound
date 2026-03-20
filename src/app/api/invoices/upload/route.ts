@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { put } from '@vercel/blob';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,19 +27,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'invoices');
-    await mkdir(uploadDir, { recursive: true });
-
     const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const uniqueFilename = `${Date.now()}-${originalName}`;
-    const absolutePath = path.join(uploadDir, uniqueFilename);
+    const uniqueFilename = `invoices/${Date.now()}-${originalName}`;
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    await writeFile(absolutePath, buffer);
+    const blob = await put(uniqueFilename, file, {
+      access: 'public',
+      contentType: 'application/pdf',
+    });
 
     return NextResponse.json({
-      filePath: `/uploads/invoices/${uniqueFilename}`,
+      filePath: blob.url,
       fileName: file.name,
     });
   } catch (error) {

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { readFile } from 'fs/promises';
-import path from 'path';
 
 interface ProcessedInvoice {
   vendorName: string;
@@ -27,10 +25,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const absolutePath = path.join(process.cwd(), 'public', filePath);
+    // Fetch PDF from blob URL or local path
     let pdfBuffer: Buffer;
     try {
-      pdfBuffer = await readFile(absolutePath);
+      if (filePath.startsWith('http')) {
+        const res = await fetch(filePath);
+        if (!res.ok) throw new Error('Failed to fetch');
+        pdfBuffer = Buffer.from(await res.arrayBuffer());
+      } else {
+        const { readFile } = await import('fs/promises');
+        const path = await import('path');
+        const absolutePath = path.join(process.cwd(), 'public', filePath);
+        pdfBuffer = await readFile(absolutePath);
+      }
     } catch {
       return NextResponse.json(
         { error: 'File not found. Please ensure the file has been uploaded.' },
