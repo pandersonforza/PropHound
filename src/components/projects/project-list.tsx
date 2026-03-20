@@ -53,6 +53,15 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
       ),
     },
     {
+      accessorKey: "address",
+      header: "Address",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {row.original.address || "—"}
+        </span>
+      ),
+    },
+    {
       accessorKey: "tenant",
       header: "Tenant",
     },
@@ -70,15 +79,6 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
       accessorKey: "totalBudget",
       header: "Budget",
       cell: ({ row }) => <CurrencyDisplay amount={row.original.totalBudget} />,
-    },
-    {
-      accessorKey: "address",
-      header: "Address",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.address || "—"}
-        </span>
-      ),
     },
     {
       accessorKey: "projectManager",
