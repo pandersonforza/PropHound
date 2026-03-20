@@ -12,6 +12,7 @@ import { ProjectForm } from "@/components/projects/project-form";
 import { useToast } from "@/components/ui/toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 import type { Project } from "@/types";
 
 interface ProjectListProps {
@@ -25,6 +26,7 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -109,16 +111,18 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
           >
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setDeleteId(row.original.id);
-              setDeleteOpen(true);
-            }}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
+          {user?.role === "admin" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setDeleteId(row.original.id);
+                setDeleteOpen(true);
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          )}
         </div>
       ),
     },
