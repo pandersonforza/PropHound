@@ -89,7 +89,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
               return (
                 <>
                   {/* Category Row */}
-                  <TableRow key={category.id} className="bg-muted/50 font-medium">
+                  <TableRow key={category.id} className="bg-primary/10 font-semibold border-t-2 border-primary/20">
                     <TableCell>
                       <button
                         type="button"
@@ -151,8 +151,8 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                       const variance = li.actualCost - li.revisedBudget;
                       const pct = li.revisedBudget > 0 ? (li.actualCost / li.revisedBudget) * 100 : 0;
                       return (
-                        <TableRow key={li.id}>
-                          <TableCell className="pl-10">{li.description}</TableCell>
+                        <TableRow key={li.id} className="hover:bg-muted/30">
+                          <TableCell className="pl-10 text-muted-foreground">{li.description}</TableCell>
                           <TableCell className="text-right">{formatCurrency(li.originalBudget)}</TableCell>
                           <TableCell className="text-right">{formatCurrency(li.revisedBudget)}</TableCell>
                           <TableCell className="text-right">{formatCurrency(li.committedCost)}</TableCell>
