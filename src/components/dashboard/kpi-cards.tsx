@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
-import { DollarSign, TrendingUp, Wallet, Building2 } from "lucide-react";
+import { DollarSign, TrendingUp, Building2 } from "lucide-react";
 import type { PortfolioKPIs } from "@/types";
 
 interface KPICardsProps {
@@ -10,8 +10,6 @@ interface KPICardsProps {
 }
 
 export function KPICards({ data }: KPICardsProps) {
-  const remaining = data.totalBudget - data.totalActualCost;
-
   const cards = [
     {
       title: "Total Budget",
@@ -24,12 +22,6 @@ export function KPICards({ data }: KPICardsProps) {
       value: data.monthlyPaid ?? 0,
       icon: TrendingUp,
       subtitle: `Total spent: $${((data.totalActualCost || 0) / 1000000).toFixed(1)}M`,
-    },
-    {
-      title: "Remaining",
-      value: remaining,
-      icon: Wallet,
-      subtitle: `${data.totalBudget > 0 ? ((remaining / data.totalBudget) * 100).toFixed(1) : 0}% remaining`,
     },
     {
       title: "Active Projects",
