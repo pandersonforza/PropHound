@@ -5,7 +5,6 @@ import Link from "next/link";
 import { type ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ProjectForm } from "@/components/projects/project-form";
@@ -74,11 +73,6 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
       accessorKey: "stage",
       header: "Stage",
       cell: ({ row }) => <StatusBadge status={row.original.stage} type="stage" />,
-    },
-    {
-      accessorKey: "totalBudget",
-      header: "Budget",
-      cell: ({ row }) => <CurrencyDisplay amount={row.original.totalBudget} />,
     },
     {
       accessorKey: "projectManager",
