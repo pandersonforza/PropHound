@@ -7,7 +7,8 @@ import { BudgetTable } from "@/components/budget/budget-table";
 import { BudgetImport } from "@/components/budget/budget-import";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload } from "lucide-react";
+import { Upload, Download } from "lucide-react";
+import { exportBudgetToExcel } from "@/components/budget/budget-export";
 import type { BudgetCategoryWithLineItems, BudgetSummary } from "@/types";
 
 export default function BudgetPage() {
@@ -15,6 +16,7 @@ export default function BudgetPage() {
   const projectId = params.id as string;
 
   const [categories, setCategories] = useState<BudgetCategoryWithLineItems[]>([]);
+  const [projectName, setProjectName] = useState("");
   const [summary, setSummary] = useState<BudgetSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +34,7 @@ export default function BudgetPage() {
       if (!projectRes.ok) throw new Error("Failed to fetch project data");
 
       const projectData = await projectRes.json();
+      setProjectName(projectData.name || "Project");
       setCategories(projectData.budgetCategories || []);
 
       if (analyticsRes.ok) {
@@ -72,7 +75,15 @@ export default function BudgetPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => exportBudgetToExcel(categories, projectName)}
+          disabled={categories.length === 0}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Export to Excel
+        </Button>
         <Button variant="outline" onClick={() => setImportOpen(true)}>
           <Upload className="h-4 w-4 mr-2" />
           Import from Excel
