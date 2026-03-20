@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
-import { Plus, ExternalLink, Trash2, DollarSign } from "lucide-react";
+import { Plus, ExternalLink, Trash2, DollarSign, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { InvoiceWithRelations } from "@/types";
 
@@ -392,6 +392,17 @@ export function InvoiceList({
               Review and edit the invoice details before approving.
             </DialogDescription>
           </DialogHeader>
+          {approvingInvoice?.filePath && (
+            <a
+              href={approvingInvoice.filePath.startsWith('http') ? `/api/invoices/file?url=${encodeURIComponent(approvingInvoice.filePath)}` : approvingInvoice.filePath}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+            >
+              <FileText className="h-4 w-4" />
+              View Attached Invoice PDF
+            </a>
+          )}
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="approve-vendor">Vendor Name</Label>
