@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
+import { useAuth } from "@/hooks/use-auth";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/invoices", label: "Invoices" },
   { href: "/vendors", label: "Vendors" },
   { href: "/reports", label: "Reports" },
+  { href: "/admin/users", label: "Users", adminOnly: true },
 ];
 
 interface SidebarProps {
@@ -26,6 +28,11 @@ interface SidebarProps {
 
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const visibleItems = navItems.filter(
+    (item) => !("adminOnly" in item && item.adminOnly) || user?.role === "admin"
+  );
 
   return (
     <>
@@ -61,7 +68,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => {
+          {visibleItems.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
