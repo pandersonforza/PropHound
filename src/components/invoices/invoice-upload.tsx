@@ -234,7 +234,12 @@ export function InvoiceUpload({
         throw new Error(err.error || "Failed to process invoice");
       }
 
-      const result: AIInvoiceResult = await processRes.json();
+      const raw = await processRes.json();
+      // Map AI response field name to our type
+      const result: AIInvoiceResult = {
+        ...raw,
+        suggestedLineItemId: raw.suggestedLineItemId || raw.suggestedBudgetLineItemId || null,
+      };
       setAiResult(result);
 
       // Populate form with AI results
@@ -246,6 +251,10 @@ export function InvoiceUpload({
 
       if (result.suggestedProjectId) {
         setSelectedProjectId(result.suggestedProjectId);
+      }
+
+      if (result.suggestedLineItemId) {
+        setSelectedLineItemId(result.suggestedLineItemId);
       }
 
       setStep("review");
