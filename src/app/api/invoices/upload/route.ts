@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const uniqueFilename = `invoices/${Date.now()}-${originalName}`;
 
     const blob = await put(uniqueFilename, file, {
-      access: 'public',
+      access: 'private',
       contentType: 'application/pdf',
     });
 

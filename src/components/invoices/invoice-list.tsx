@@ -282,7 +282,7 @@ export function InvoiceList({
           <div className="flex items-center gap-1">
             {row.original.filePath && (
               <a
-                href={row.original.filePath}
+                href={row.original.filePath.startsWith('http') ? `/api/invoices/file?url=${encodeURIComponent(row.original.filePath)}` : row.original.filePath}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="View PDF"

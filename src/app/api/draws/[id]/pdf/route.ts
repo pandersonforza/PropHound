@@ -207,7 +207,14 @@ export async function GET(
         try {
           let fileBytes: Buffer;
           if (invoice.filePath.startsWith('http')) {
-            const res = await fetch(invoice.filePath);
+            let fetchUrl = invoice.filePath;
+            try {
+              const { getDownloadUrl } = await import('@vercel/blob');
+              fetchUrl = await getDownloadUrl(invoice.filePath);
+            } catch {
+              // Fall back to direct URL
+            }
+            const res = await fetch(fetchUrl);
             if (!res.ok) throw new Error('Failed to fetch');
             fileBytes = Buffer.from(await res.arrayBuffer());
           } else {
