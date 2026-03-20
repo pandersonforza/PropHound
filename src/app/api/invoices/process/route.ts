@@ -29,16 +29,12 @@ export async function POST(request: NextRequest) {
     let pdfBuffer: Buffer;
     try {
       if (filePath.startsWith('http')) {
-        // For private blobs, get a signed download URL
-        let fetchUrl = filePath;
-        try {
-          const { getDownloadUrl } = await import('@vercel/blob');
-          fetchUrl = await getDownloadUrl(filePath);
-        } catch {
-          // If getDownloadUrl fails, try the URL directly (public blob or non-blob URL)
-        }
-        const res = await fetch(fetchUrl);
-        if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
+        // For Vercel Blob private stores, use the token to authenticate
+        const token = process.env.BLOB_READ_WRITE_TOKEN;
+        const res = await fetch(filePath, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error(`Failed to fetch blob: ${res.status} ${res.statusText}`);
         pdfBuffer = Buffer.from(await res.arrayBuffer());
       } else {
         const { readFile } = await import('fs/promises');
@@ -48,8 +44,9 @@ export async function POST(request: NextRequest) {
       }
     } catch (fetchErr) {
       console.error('File fetch error:', fetchErr);
+      const msg = fetchErr instanceof Error ? fetchErr.message : 'Unknown error';
       return NextResponse.json(
-        { error: 'File not found. Please ensure the file has been uploaded.' },
+        { error: `File not found: ${msg}` },
         { status: 404 }
       );
     }
