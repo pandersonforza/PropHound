@@ -345,6 +345,19 @@ export function InvoiceList({
                 Mark Paid
               </Button>
             )}
+            {user?.role === "admin" && status !== "Pending Review" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Delete invoice (admin)"
+                onClick={() => {
+                  setDeleteId(row.original.id);
+                  setDeleteOpen(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
           </div>
         );
       },
