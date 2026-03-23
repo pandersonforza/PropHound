@@ -14,6 +14,7 @@ const tabs = [
   { label: "Draws", href: "/draws" },
   { label: "Contracts", href: "/contracts" },
   { label: "Invoices", href: "/invoices" },
+  { label: "Bids", href: "/bids" },
   { label: "Documents", href: "/documents" },
   { label: "Notes", href: "/notes" },
 ];

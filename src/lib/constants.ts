@@ -93,6 +93,10 @@ export const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   Inactive: { bg: "bg-gray-800/50", text: "text-gray-400" },
   Preferred: { bg: "bg-purple-900/40", text: "text-purple-400" },
 
+  // Bid statuses
+  "Under Review": { bg: "bg-amber-900/40", text: "text-amber-400" },
+  Accepted: { bg: "bg-emerald-900/40", text: "text-emerald-400" },
+
   // Invoice statuses
   "Pending Review": { bg: "bg-amber-900/40", text: "text-amber-400" },
   Rejected: { bg: "bg-red-900/40", text: "text-red-400" },

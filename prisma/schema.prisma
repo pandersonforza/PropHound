@@ -81,6 +81,8 @@ model Project {
   invoices         Invoice[]
   tasks            Task[]
   notes            Note[]
+  bidInvitations   BidInvitation[]
+  bids             Bid[]
 }
 
 model Note {
@@ -246,4 +248,57 @@ model Invoice {
   @@index([projectId])
   @@index([approverId])
   @@index([drawRequestId])
+}
+
+model BidInvitation {
+  id        String    @id @default(cuid())
+  projectId String
+  token     String    @unique @default(cuid())
+  gcCompany String?
+  gcEmail   String?
+  gcName    String?
+  status    String    @default("Open")
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  bids    Bid[]
+
+  @@index([projectId])
+  @@index([token])
+}
+
+model Bid {
+  id           String   @id @default(cuid())
+  invitationId String
+  projectId    String
+  gcCompany    String
+  gcName       String?
+  gcEmail      String?
+  gcPhone      String?
+  totalAmount  Float
+  notes        String?
+  status       String   @default("Submitted")
+  submittedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  invitation BidInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lineItems  BidLineItem[]
+
+  @@index([invitationId])
+  @@index([projectId])
+}
+
+model BidLineItem {
+  id          String  @id @default(cuid())
+  bidId       String
+  description String
+  amount      Float
+  category    String?
+
+  bid Bid @relation(fields: [bidId], references: [id], onDelete: Cascade)
+
+  @@index([bidId])
 }
