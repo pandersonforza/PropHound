@@ -36,23 +36,6 @@ export function BidSubmissionForm({
   const [gcPhone, setGcPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    // Design fees
-    { id: crypto.randomUUID(), description: "Architectural", amount: "", category: "Design fees" },
-    // Equipment
-    { id: crypto.randomUUID(), description: "Full Equipment Cost", amount: "", category: "Equipment" },
-    { id: crypto.randomUUID(), description: "Indoor Furnishings", amount: "", category: "Equipment" },
-    { id: crypto.randomUUID(), description: "Outdoor Furniture", amount: "", category: "Equipment" },
-    { id: crypto.randomUUID(), description: "Ecolab", amount: "", category: "Equipment" },
-    { id: crypto.randomUUID(), description: "HVAC Units", amount: "", category: "Equipment" },
-    { id: crypto.randomUUID(), description: "Electrical Equipment", amount: "", category: "Equipment" },
-    { id: crypto.randomUUID(), description: "Beverage Install", amount: "", category: "Equipment" },
-    { id: crypto.randomUUID(), description: "NUCO2", amount: "", category: "Equipment" },
-    { id: crypto.randomUUID(), description: "Low Voltage", amount: "", category: "Equipment" },
-    // Signage
-    { id: crypto.randomUUID(), description: "Building Sign", amount: "", category: "Signage" },
-    { id: crypto.randomUUID(), description: "Pylon/Monument Sign", amount: "", category: "Signage" },
-    { id: crypto.randomUUID(), description: "Site Signage", amount: "", category: "Signage" },
-    { id: crypto.randomUUID(), description: "Awnings", amount: "", category: "Signage" },
     // General Conditions
     { id: crypto.randomUUID(), description: "Supervision", amount: "", category: "General Conditions" },
     { id: crypto.randomUUID(), description: "Contractor Overhead", amount: "", category: "General Conditions" },
