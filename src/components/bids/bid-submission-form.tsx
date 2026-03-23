@@ -157,7 +157,14 @@ export function BidSubmissionForm({
           <h1 className="text-3xl font-bold">Submit a Bid</h1>
           <p className="text-lg text-muted-foreground">{projectName}</p>
           {projectAddress && (
-            <p className="text-sm text-muted-foreground">{projectAddress}</p>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(projectAddress)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline"
+            >
+              {projectAddress}
+            </a>
           )}
         </div>
 
