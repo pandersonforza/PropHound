@@ -54,7 +54,7 @@ export function InvoiceList({
     description: "",
   });
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, canEdit } = useAuth();
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -291,7 +291,7 @@ export function InvoiceList({
                 <ExternalLink className="h-4 w-4" />
               </a>
             )}
-            {status === "Pending Review" && (
+            {canEdit && status === "Pending Review" && (
               <>
                 <Button
                   size="sm"
@@ -312,7 +312,7 @@ export function InvoiceList({
                 </Button>
               </>
             )}
-            {status === "Submitted" && (
+            {canEdit && status === "Submitted" && (
               <>
                 <Button
                   size="sm"
@@ -335,7 +335,7 @@ export function InvoiceList({
                 </Button>
               </>
             )}
-            {status === "Approved" && (
+            {canEdit && status === "Approved" && (
               <Button
                 size="sm"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
@@ -368,10 +368,12 @@ export function InvoiceList({
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold">Invoices</h2>
-        <Button onClick={() => setUploadOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Upload Invoice
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setUploadOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Upload Invoice
+          </Button>
+        )}
       </div>
 
       <DataTable

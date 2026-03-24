@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Upload, Download } from "lucide-react";
 import { exportBudgetToExcel } from "@/components/budget/budget-export";
+import { useAuth } from "@/hooks/use-auth";
 import type { BudgetCategoryWithLineItems, BudgetSummary } from "@/types";
 
 export default function BudgetPage() {
@@ -21,6 +22,7 @@ export default function BudgetPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const { canEdit } = useAuth();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -84,10 +86,12 @@ export default function BudgetPage() {
           <Download className="h-4 w-4 mr-2" />
           Export to Excel
         </Button>
-        <Button variant="outline" onClick={() => setImportOpen(true)}>
-          <Upload className="h-4 w-4 mr-2" />
-          Import from Excel
-        </Button>
+        {canEdit && (
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import from Excel
+          </Button>
+        )}
       </div>
       {summary && (
         <BudgetOverview summary={summary} />

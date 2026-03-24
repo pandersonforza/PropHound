@@ -40,5 +40,7 @@ export function useAuth() {
     router.refresh();
   }, [router]);
 
-  return { user, isLoading, logout };
+  const canEdit = user?.role === "admin" || user?.role === "user";
+
+  return { user, isLoading, logout, canEdit };
 }

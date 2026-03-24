@@ -8,6 +8,7 @@ import { MilestoneForm } from "./milestone-form";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils";
 import { Plus, Pencil, Trash2, Upload, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import {
   PieChart,
   Pie,
@@ -44,6 +45,7 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const { canEdit } = useAuth();
 
   const fetchMilestones = useCallback(async () => {
     try {
@@ -249,32 +251,34 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Milestones</CardTitle>
-            <div className="flex items-center gap-2">
-              <label className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                <input
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={handleUploadAgreement}
-                  disabled={uploading}
-                />
-                {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-                {uploading ? "Processing..." : "Upload Dev Agreement"}
-              </label>
-              <Button
-                onClick={() => {
-                  setEditMilestone(undefined);
-                  setFormOpen(true);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Milestone
-              </Button>
-            </div>
+            {canEdit && (
+              <div className="flex items-center gap-2">
+                <label className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={handleUploadAgreement}
+                    disabled={uploading}
+                  />
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {uploading ? "Processing..." : "Upload Dev Agreement"}
+                </label>
+                <Button
+                  onClick={() => {
+                    setEditMilestone(undefined);
+                    setFormOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Milestone
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -307,9 +311,10 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
                       >
                         <td className="py-3 pr-4">
                           <button
-                            onClick={() => handleToggleComplete(m)}
-                            className="flex items-center justify-center"
-                            title={isCompleted ? "Mark as pending" : "Mark as complete"}
+                            onClick={() => canEdit && handleToggleComplete(m)}
+                            className={`flex items-center justify-center ${canEdit ? "" : "cursor-default"}`}
+                            title={!canEdit ? "" : isCompleted ? "Mark as pending" : "Mark as complete"}
+                            disabled={!canEdit}
                           >
                             <div
                               className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
@@ -355,30 +360,32 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
                             ? new Date(m.completedDate).toLocaleDateString()
                             : "—"}
                         </td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setEditMilestone(m);
-                                setFormOpen(true);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setDeleteId(m.id);
-                                setDeleteOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </td>
+                        {canEdit && (
+                          <td className="py-3">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setEditMilestone(m);
+                                  setFormOpen(true);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setDeleteId(m.id);
+                                  setDeleteOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

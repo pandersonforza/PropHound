@@ -42,7 +42,7 @@ export function InvoiceUpload({
   onSuccess,
 }: InvoiceUploadProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, canEdit } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<UploadStep>("upload");
@@ -391,6 +391,8 @@ export function InvoiceUpload({
   const approverOptions = users
     .filter((u) => u.id !== user?.id)
     .map((u) => ({ value: u.id, label: u.name }));
+
+  if (!canEdit) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

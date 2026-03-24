@@ -52,7 +52,7 @@ export function BidList({ projectId }: BidListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, canEdit } = useAuth();
 
   const fetchBids = useCallback(async () => {
     try {
@@ -111,7 +111,7 @@ export function BidList({ projectId }: BidListProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Bids ({bids.length})</h2>
-        <GenerateBidLink projectId={projectId} onCreated={fetchBids} />
+        {canEdit && <GenerateBidLink projectId={projectId} onCreated={fetchBids} />}
       </div>
 
       {bids.length === 0 ? (
@@ -171,7 +171,7 @@ export function BidList({ projectId }: BidListProps) {
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
-                        {STATUS_OPTIONS.filter((s) => s !== bid.status).map(
+                        {canEdit && STATUS_OPTIONS.filter((s) => s !== bid.status).map(
                           (status) => (
                             <Button
                               key={status}
@@ -184,7 +184,7 @@ export function BidList({ projectId }: BidListProps) {
                             </Button>
                           )
                         )}
-                        {user?.role === "admin" && (
+                        {canEdit && user?.role === "admin" && (
                           <Button
                             variant="ghost"
                             size="sm"

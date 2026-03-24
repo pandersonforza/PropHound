@@ -24,7 +24,7 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, canEdit } = useAuth();
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -82,7 +82,7 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
       id: "actions",
       header: "",
       enableSorting: false,
-      cell: ({ row }) => (
+      cell: ({ row }) => canEdit ? (
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -107,7 +107,7 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
             </Button>
           )}
         </div>
-      ),
+      ) : null,
     },
   ];
 
@@ -130,15 +130,17 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-3xl font-bold">Projects</h1>
-        <Button
-          onClick={() => {
-            setEditProject(undefined);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Project
-        </Button>
+        {canEdit && (
+          <Button
+            onClick={() => {
+              setEditProject(undefined);
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-1 mb-4 border-b border-border">

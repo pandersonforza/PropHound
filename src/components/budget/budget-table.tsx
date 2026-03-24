@@ -16,6 +16,7 @@ import { BudgetLineItemForm } from "@/components/budget/budget-line-item-form";
 import { BudgetCategoryForm } from "@/components/budget/budget-category-form";
 import { useToast } from "@/components/ui/toast";
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import type { BudgetCategoryWithLineItems, BudgetLineItem } from "@/types";
 
@@ -36,6 +37,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
   const [deleteTarget, setDeleteTarget] = useState<{ type: "category" | "lineItem"; id: string } | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { toast } = useToast();
+  const { canEdit } = useAuth();
 
   const toggleCategory = (id: string) => {
     const next = new Set(expandedCategories);
@@ -116,32 +118,34 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                     </TableCell>
                     <TableCell className="text-right">{formatPercent(catPct)}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => {
-                            setSelectedCategoryId(category.id);
-                            setEditLineItem(undefined);
-                            setLineItemFormOpen(true);
-                          }}
-                          title="Add line item"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => {
-                            setDeleteTarget({ type: "category", id: category.id });
-                            setDeleteOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        </Button>
-                      </div>
+                      {canEdit && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              setSelectedCategoryId(category.id);
+                              setEditLineItem(undefined);
+                              setLineItemFormOpen(true);
+                            }}
+                            title="Add line item"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              setDeleteTarget({ type: "category", id: category.id });
+                              setDeleteOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
 
@@ -162,31 +166,33 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                           </TableCell>
                           <TableCell className="text-right">{formatPercent(pct)}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => {
-                                  setSelectedCategoryId(category.id);
-                                  setEditLineItem(li);
-                                  setLineItemFormOpen(true);
-                                }}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => {
-                                  setDeleteTarget({ type: "lineItem", id: li.id });
-                                  setDeleteOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3 text-destructive" />
-                              </Button>
-                            </div>
+                            {canEdit && (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => {
+                                    setSelectedCategoryId(category.id);
+                                    setEditLineItem(li);
+                                    setLineItemFormOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => {
+                                    setDeleteTarget({ type: "lineItem", id: li.id });
+                                    setDeleteOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                </Button>
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       );

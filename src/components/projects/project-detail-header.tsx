@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ProjectForm } from "@/components/projects/project-form";
 import { Pencil, MapPin } from "lucide-react";
 import { formatPercent } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 import type { Project } from "@/types";
 
 interface ProjectDetailHeaderProps {
@@ -25,6 +26,7 @@ interface ProjectDetailHeaderProps {
 
 export function ProjectDetailHeader({ project, budgetSummary, onMutate }: ProjectDetailHeaderProps) {
   const [editOpen, setEditOpen] = useState(false);
+  const { canEdit } = useAuth();
 
   const totalBudget = budgetSummary?.revisedBudget ?? project.totalBudget;
   const spent = budgetSummary?.actualCost ?? 0;
@@ -53,10 +55,12 @@ export function ProjectDetailHeader({ project, budgetSummary, onMutate }: Projec
               <StatusBadge status={project.stage} type="stage" />
             </div>
           </div>
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+          {canEdit && (
+            <Button variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

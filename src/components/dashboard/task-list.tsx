@@ -58,7 +58,7 @@ export function TaskList() {
   const [adding, setAdding] = useState(false);
   const [users, setUsers] = useState<TaskUser[]>([]);
   const { toast } = useToast();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, canEdit } = useAuth();
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -176,10 +176,12 @@ export function TaskList() {
                   {activeTasks.length} active
                 </Badge>
               )}
-              <Button size="sm" onClick={openCreateDialog}>
-                <Plus className="h-4 w-4 mr-1" />
-                New Task
-              </Button>
+              {canEdit && (
+                <Button size="sm" onClick={openCreateDialog}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  New Task
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -234,13 +236,15 @@ export function TaskList() {
                     >
                       {task.priority}
                     </Badge>
-                    <button
-                      onClick={() => handleDelete(task.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                      title="Delete task"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleDelete(task.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        title="Delete task"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </button>
+                    )}
                   </div>
                 );
               })}

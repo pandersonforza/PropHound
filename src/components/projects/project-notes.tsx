@@ -22,7 +22,7 @@ interface ProjectNotesProps {
 
 export function ProjectNotes({ projectId }: ProjectNotesProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, canEdit } = useAuth();
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -103,19 +103,21 @@ export function ProjectNotes({ projectId }: ProjectNotesProps) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <Textarea
-          placeholder="Add a note..."
-          value={newNote}
-          onChange={(e) => setNewNote(e.target.value)}
-          rows={3}
-        />
-        <div className="flex justify-end">
-          <Button onClick={handleSubmit} disabled={loading || !newNote.trim()}>
-            {loading ? "Adding..." : "Add Note"}
-          </Button>
+      {canEdit && (
+        <div className="space-y-3">
+          <Textarea
+            placeholder="Add a note..."
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            rows={3}
+          />
+          <div className="flex justify-end">
+            <Button onClick={handleSubmit} disabled={loading || !newNote.trim()}>
+              {loading ? "Adding..." : "Add Note"}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {notes.length === 0 ? (
         <p className="text-muted-foreground text-sm">No notes yet.</p>
@@ -156,7 +158,7 @@ export function ProjectNotes({ projectId }: ProjectNotesProps) {
                       <p className="text-sm whitespace-pre-wrap">{note.content}</p>
                     )}
                   </div>
-                  {user?.id === note.author.id && editingId !== note.id && (
+                  {canEdit && user?.id === note.author.id && editingId !== note.id && (
                     <div className="flex gap-1 shrink-0">
                       <Button
                         variant="ghost"
