@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
-import { CATEGORY_GROUPS } from "@/lib/constants";
+import { CATEGORY_GROUPS, DEFAULT_SUBCATEGORIES } from "@/lib/constants";
 
 interface BudgetCategoryFormProps {
   open: boolean;
@@ -39,6 +39,8 @@ export function BudgetCategoryForm({
     }
   }, [open]);
 
+  const suggestions = DEFAULT_SUBCATEGORIES[categoryGroup] || [];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -49,11 +51,11 @@ export function BudgetCategoryForm({
         body: JSON.stringify({ projectId, name, categoryGroup }),
       });
       if (!res.ok) throw new Error("Failed to create category");
-      toast({ title: "Category created" });
+      toast({ title: "Subcategory created" });
       onSuccess();
       onOpenChange(false);
     } catch {
-      toast({ title: "Error", description: "Failed to create category", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to create subcategory", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -63,18 +65,9 @@ export function BudgetCategoryForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Budget Category</DialogTitle>
+          <DialogTitle>Add Budget Subcategory</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="catName">Category Name</Label>
-            <Input
-              id="catName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="catGroup">Category Group</Label>
             <select
@@ -87,6 +80,34 @@ export function BudgetCategoryForm({
                 <option key={g} value={g}>{g}</option>
               ))}
             </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="catName">Subcategory Name</Label>
+            <Input
+              id="catName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Building Costs"
+              required
+            />
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setName(s)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                      name === s
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

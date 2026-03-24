@@ -27,6 +27,13 @@ export const CATEGORY_GROUPS = [
   "Land",
 ] as const;
 
+export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
+  "Hard Costs": ["Building Costs", "Site Costs", "Equipment", "Signage", "General Conditions"],
+  "Soft Costs": ["Design Fees", "Third Party DD", "Entitlements", "Permits & Fees", "Outside Costs"],
+  "Financing": ["Loan Fees", "Interest", "Closing Costs"],
+  "Land": ["Acquisition", "Due Diligence"],
+};
+
 export const CONTRACT_TYPES = [
   "Lump Sum",
   "GMP",
