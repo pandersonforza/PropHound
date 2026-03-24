@@ -90,7 +90,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
         {/* Footer */}
         <div className="border-t border-border p-4">
           <p className="text-xs text-muted-foreground">
-            BuildDogs v1.0
+            BuildForza v1.0
           </p>
         </div>
       </aside>

@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "BuildDogs - Real Estate Development Manager",
+  title: "BuildForza - Real Estate Development Manager",
   description:
     "Project management application for real estate development projects",
 };
