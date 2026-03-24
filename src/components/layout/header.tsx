@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 const KNOWN_SEGMENTS: Record<string, string> = {
   dashboard: "Dashboard",
   projects: "Projects",
-  vendors: "Vendors",
   reports: "Reports",
   budget: "Budget",
   draws: "Draws",
