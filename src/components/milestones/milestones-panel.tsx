@@ -3,24 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { MilestoneForm } from "./milestone-form";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Pencil, Trash2, CheckCircle2, Clock, CircleDashed, Upload, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Loader2 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
   PieChart,
   Pie,
   Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
 } from "recharts";
 
 interface Milestone {
@@ -39,13 +33,7 @@ interface MilestonesPanelProps {
   projectId: string;
 }
 
-const STATUS_ICONS: Record<string, React.ReactNode> = {
-  Pending: <CircleDashed className="h-4 w-4 text-muted-foreground" />,
-  "In Progress": <Clock className="h-4 w-4 text-amber-400" />,
-  Completed: <CheckCircle2 className="h-4 w-4 text-emerald-400" />,
-};
-
-const PIE_COLORS = ["#10b981", "#f59e0b", "#64748b"];
+const PIE_COLORS = ["#10b981", "#64748b"];
 
 export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
@@ -86,6 +74,23 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
     }
   };
 
+  const handleToggleComplete = async (milestone: Milestone) => {
+    const newStatus = milestone.status === "Completed" ? "Pending" : "Completed";
+    const completedDate = newStatus === "Completed" ? new Date().toISOString() : null;
+
+    try {
+      const res = await fetch(`/api/milestones/${milestone.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus, completedDate }),
+      });
+      if (!res.ok) throw new Error();
+      fetchMilestones();
+    } catch {
+      toast({ title: "Error", description: "Failed to update milestone", variant: "destructive" });
+    }
+  };
+
   const handleUploadAgreement = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -117,7 +122,6 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
         return;
       }
 
-      // Create all milestones from the parsed data
       let created = 0;
       for (let i = 0; i < data.milestones.length; i++) {
         const m = data.milestones[i];
@@ -159,19 +163,10 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
   const totalPaid = milestones.reduce((sum, m) => sum + m.paidAmount, 0);
   const totalRemaining = totalExpectedFees - totalPaid;
   const completedCount = milestones.filter((m) => m.status === "Completed").length;
-  const inProgressCount = milestones.filter((m) => m.status === "In Progress").length;
   const pendingCount = milestones.filter((m) => m.status === "Pending").length;
-
-  // Chart data
-  const barData = milestones.map((m) => ({
-    name: m.name.length > 15 ? m.name.slice(0, 15) + "…" : m.name,
-    "Expected Fee": m.devFee,
-    "Paid to Date": m.paidAmount,
-  }));
 
   const pieData = [
     { name: "Completed", value: completedCount },
-    { name: "In Progress", value: inProgressCount },
     { name: "Pending", value: pendingCount },
   ].filter((d) => d.value > 0);
 
@@ -211,87 +206,44 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
         </Card>
       </div>
 
-      {/* Charts */}
-      {milestones.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Expected vs Paid by Milestone</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={barData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                    interval={0}
-                    angle={-25}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      color: "hsl(var(--foreground))",
-                    }}
-                    formatter={(value) => formatCurrency(Number(value))}
-                  />
-                  <Legend />
-                  <Bar dataKey="Expected Fee" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Paid to Date" fill="#10b981" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Milestone Status</CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center">
-              {pieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={4}
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                        color: "hsl(var(--foreground))",
-                      }}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-muted-foreground text-sm">No data</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      {/* Milestone Status Chart */}
+      {milestones.length > 0 && pieData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Milestone Status</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center">
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={4}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    color: "hsl(var(--foreground))",
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Milestones Table */}
+      {/* Milestones Checklist */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -327,14 +279,14 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
         <CardContent>
           {milestones.length === 0 ? (
             <p className="text-muted-foreground text-sm text-center py-8">
-              No milestones yet. Click "Add Milestone" to get started.
+              No milestones yet. Click &quot;Add Milestone&quot; or upload a dev agreement to get started.
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="py-3 pr-4">Status</th>
+                    <th className="py-3 pr-4 w-10"></th>
                     <th className="py-3 pr-4">Milestone</th>
                     <th className="py-3 pr-4 text-right">Dev Fee</th>
                     <th className="py-3 pr-4 text-right">Paid</th>
@@ -345,73 +297,95 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {milestones.map((m) => (
-                    <tr key={m.id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="py-3 pr-4">
-                        <div className="flex items-center gap-2">
-                          {STATUS_ICONS[m.status] || STATUS_ICONS["Pending"]}
-                          <StatusBadge status={m.status} />
-                        </div>
-                      </td>
-                      <td className="py-3 pr-4">
-                        <div>
-                          <span className="font-medium">{m.name}</span>
-                          {m.description && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{m.description}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 pr-4 text-right font-medium">
-                        {formatCurrency(m.devFee)}
-                      </td>
-                      <td className="py-3 pr-4 text-right text-emerald-400">
-                        {formatCurrency(m.paidAmount)}
-                      </td>
-                      <td className="py-3 pr-4 text-right text-amber-400">
-                        {formatCurrency(m.devFee - m.paidAmount)}
-                      </td>
-                      <td className="py-3 pr-4 text-muted-foreground">
-                        {m.expectedDate
-                          ? new Date(m.expectedDate).toLocaleDateString()
-                          : "—"}
-                      </td>
-                      <td className="py-3 pr-4 text-muted-foreground">
-                        {m.completedDate
-                          ? new Date(m.completedDate).toLocaleDateString()
-                          : "—"}
-                      </td>
-                      <td className="py-3">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setEditMilestone(m);
-                              setFormOpen(true);
-                            }}
+                  {milestones.map((m) => {
+                    const isCompleted = m.status === "Completed";
+                    return (
+                      <tr
+                        key={m.id}
+                        className={`border-b border-border/50 hover:bg-muted/30 ${isCompleted ? "opacity-60" : ""}`}
+                      >
+                        <td className="py-3 pr-4">
+                          <button
+                            onClick={() => handleToggleComplete(m)}
+                            className="flex items-center justify-center"
+                            title={isCompleted ? "Mark as pending" : "Mark as complete"}
                           >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setDeleteId(m.id);
-                              setDeleteOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <div
+                              className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                isCompleted
+                                  ? "bg-emerald-500 border-emerald-500"
+                                  : "border-muted-foreground/40 hover:border-primary"
+                              }`}
+                            >
+                              {isCompleted && (
+                                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </button>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div>
+                            <span className={`font-medium ${isCompleted ? "line-through" : ""}`}>
+                              {m.name}
+                            </span>
+                            {m.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5">{m.description}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4 text-right font-medium">
+                          {formatCurrency(m.devFee)}
+                        </td>
+                        <td className="py-3 pr-4 text-right text-emerald-400">
+                          {formatCurrency(m.paidAmount)}
+                        </td>
+                        <td className="py-3 pr-4 text-right text-amber-400">
+                          {formatCurrency(m.devFee - m.paidAmount)}
+                        </td>
+                        <td className="py-3 pr-4 text-muted-foreground">
+                          {m.expectedDate
+                            ? new Date(m.expectedDate).toLocaleDateString()
+                            : "—"}
+                        </td>
+                        <td className="py-3 pr-4 text-muted-foreground">
+                          {m.completedDate
+                            ? new Date(m.completedDate).toLocaleDateString()
+                            : "—"}
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditMilestone(m);
+                                setFormOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setDeleteId(m.id);
+                                setDeleteOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-primary/20 font-semibold">
-                    <td className="py-3 pr-4" colSpan={2}>
-                      Totals
-                    </td>
+                    <td className="py-3 pr-4"></td>
+                    <td className="py-3 pr-4">Totals</td>
                     <td className="py-3 pr-4 text-right">{formatCurrency(totalExpectedFees)}</td>
                     <td className="py-3 pr-4 text-right text-emerald-400">
                       {formatCurrency(totalPaid)}

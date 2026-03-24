@@ -32,7 +32,7 @@ interface MilestoneFormProps {
   onSuccess: () => void;
 }
 
-const STATUSES = ["Pending", "In Progress", "Completed"];
+const STATUSES = ["Pending", "Completed"];
 
 export function MilestoneForm({
   open,
