@@ -99,8 +99,8 @@ export function PortfolioAnalytics() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={budgetData} layout="vertical" margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} className="text-xs" />
-              <YAxis type="category" dataKey="name" className="text-xs" width={100} />
+              <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "#d1d5db", fontSize: 12 }} />
+              <YAxis type="category" dataKey="name" tick={{ fill: "#d1d5db", fontSize: 12 }} width={100} />
               <Tooltip
                 formatter={(value) => formatCurrency(Number(value))}
                 contentStyle={{
@@ -124,8 +124,8 @@ export function PortfolioAnalytics() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={spendingByType}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="name" className="text-xs" />
-              <YAxis tickFormatter={(v) => formatCurrency(v)} className="text-xs" />
+              <XAxis dataKey="name" tick={{ fill: "#d1d5db", fontSize: 12 }} />
+              <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "#d1d5db", fontSize: 12 }} />
               <Tooltip
                 formatter={(value) => formatCurrency(Number(value))}
                 contentStyle={{
@@ -157,13 +157,14 @@ export function PortfolioAnalytics() {
                 paddingAngle={4}
                 dataKey="value"
                 label={({ name, value }) => `${name}: ${value}`}
+                labelLine={{ stroke: "#d1d5db" }}
               >
                 {statusData.map((entry) => (
                   <Cell key={entry.name} fill={STATUS_CHART_COLORS[entry.name] || "#94a3b8"} />
                 ))}
               </Pie>
               <Tooltip />
-              <Legend />
+              <Legend wrapperStyle={{ color: "#d1d5db" }} />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>
@@ -185,13 +186,14 @@ export function PortfolioAnalytics() {
                 paddingAngle={4}
                 dataKey="value"
                 label={({ name, value }) => `${name}: ${value}`}
+                labelLine={{ stroke: "#d1d5db" }}
               >
                 {stageData.map((entry) => (
                   <Cell key={entry.name} fill={STAGE_CHART_COLORS[entry.name] || "#94a3b8"} />
                 ))}
               </Pie>
               <Tooltip />
-              <Legend />
+              <Legend wrapperStyle={{ color: "#d1d5db" }} />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>

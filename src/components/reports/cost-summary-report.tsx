@@ -104,8 +104,8 @@ export function CostSummaryReport() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="name" className="text-xs" />
-                  <YAxis tickFormatter={(v) => formatCurrency(v)} className="text-xs" />
+                  <XAxis dataKey="name" tick={{ fill: "#d1d5db", fontSize: 12 }} />
+                  <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "#d1d5db", fontSize: 12 }} />
                   <Tooltip
                     formatter={(value) => formatCurrency(Number(value))}
                     contentStyle={{
