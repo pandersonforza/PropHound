@@ -180,7 +180,6 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                     </TableCell>
                     <TableCell className="text-right">{formatCurrency(totals.original)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(totals.revised)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totals.committed)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(totals.actual)}</TableCell>
                     <TableCell className="text-right">
                       <CurrencyDisplay amount={totals.variance} showVariance baseAmount={0} />
