@@ -364,8 +364,23 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
             })}
             {categories.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  No budget categories. Add one to get started.
+                <TableCell colSpan={7} className="h-24 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-muted-foreground">No budget categories. Add one to get started.</p>
+                    {canEdit && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setEditCategory(undefined);
+                          setDefaultCategoryGroup(undefined);
+                          setCategoryFormOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Subcategory
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             )}
