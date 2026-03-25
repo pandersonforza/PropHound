@@ -416,7 +416,7 @@ export function InvoiceList({
       />
 
       <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Approve Invoice</DialogTitle>
             <DialogDescription>
@@ -453,7 +453,7 @@ export function InvoiceList({
                   {payAppItemsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
                 {payAppItemsOpen && (
-                  <table className="w-full text-sm">
+                  <div className="max-h-48 overflow-y-auto"><table className="w-full text-sm">
                     <thead>
                       <tr className="border-t border-border bg-muted/20 text-left text-muted-foreground">
                         <th className="py-1.5 px-3">Description</th>
@@ -476,7 +476,7 @@ export function InvoiceList({
                         </td>
                       </tr>
                     </tfoot>
-                  </table>
+                  </table></div>
                 )}
               </div>
             );
