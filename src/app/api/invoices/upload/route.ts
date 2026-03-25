@@ -1,48 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { NextResponse } from 'next/server';
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
+import { NextRequest } from 'next/server';
 
-export const maxDuration = 30;
-
+// Client upload handler — the file goes directly from browser to Blob storage,
+// bypassing the 4.5MB serverless body limit.
 export async function POST(request: NextRequest) {
+  const body = (await request.json()) as HandleUploadBody;
+
   try {
-    const formData = await request.formData();
-    const file = formData.get('file');
-
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { error: 'No file provided. Please upload a file using the "file" field.' },
-        { status: 400 }
-      );
-    }
-
-    if (file.type !== 'application/pdf') {
-      return NextResponse.json(
-        { error: 'Invalid file type. Only PDF files are accepted.' },
-        { status: 400 }
-      );
-    }
-
-    if (file.size === 0) {
-      return NextResponse.json(
-        { error: 'Uploaded file is empty.' },
-        { status: 400 }
-      );
-    }
-
-    const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const uniqueFilename = `invoices/${Date.now()}-${originalName}`;
-
-    const blob = await put(uniqueFilename, file, {
-      access: 'private',
-      contentType: 'application/pdf',
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async (pathname) => {
+        // Validate the upload before generating a token
+        if (!pathname.endsWith('.pdf')) {
+          throw new Error('Only PDF files are accepted');
+        }
+        return {
+          allowedContentTypes: ['application/pdf'],
+          maximumSizeInBytes: 50 * 1024 * 1024, // 50MB max
+          tokenPayload: JSON.stringify({}),
+        };
+      },
+      onUploadCompleted: async () => {
+        // Nothing needed after upload
+      },
     });
 
-    return NextResponse.json({
-      filePath: blob.url,
-      fileName: file.name,
-    });
+    return NextResponse.json(jsonResponse);
   } catch (error) {
-    console.error('Failed to upload invoice file:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { error: `Failed to upload file: ${message}` },

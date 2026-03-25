@@ -206,31 +206,23 @@ export function InvoiceUpload({
     setStep("processing");
 
     try {
-      // Step 1: Upload the file
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      if (projectId) {
-        formData.append("projectId", projectId);
-      }
+      // Step 1: Upload file directly to Blob (client-side, bypasses 4.5MB limit)
+      const { upload } = await import("@vercel/blob/client");
+      const originalName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const pathname = `invoices/${Date.now()}-${originalName}`;
 
-      const uploadRes = await fetch("/api/invoices/upload", {
-        method: "POST",
-        body: formData,
+      const blob = await upload(pathname, selectedFile, {
+        access: "private",
+        handleUploadUrl: "/api/invoices/upload",
       });
 
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to upload file");
-      }
-
-      const uploadData = await uploadRes.json();
-      setFilePath(uploadData.filePath);
+      setFilePath(blob.url);
 
       // Step 2: Process with AI
       const processRes = await fetch("/api/invoices/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filePath: uploadData.filePath }),
+        body: JSON.stringify({ filePath: blob.url }),
       });
 
       if (!processRes.ok) {
