@@ -130,11 +130,11 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
           <TableHeader>
             <TableRow>
               <TableHead className="w-[300px]">Description</TableHead>
-              <TableHead className="text-right">Original</TableHead>
-              <TableHead className="text-right">Current</TableHead>
-              <TableHead className="text-right">Actual</TableHead>
-              <TableHead className="text-right">Remaining</TableHead>
-              <TableHead className="text-right">%</TableHead>
+              <TableHead className="text-right w-[140px]">Original</TableHead>
+              <TableHead className="text-right w-[140px]">Current</TableHead>
+              <TableHead className="text-right w-[140px]">Actual</TableHead>
+              <TableHead className="text-right w-[140px]">Remaining</TableHead>
+              <TableHead className="text-right w-[60px]">%</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
