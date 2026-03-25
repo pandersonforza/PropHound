@@ -78,7 +78,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
           if (idxA !== -1 && idxB !== -1) return idxA - idxB;
           if (idxA !== -1) return -1;
           if (idxB !== -1) return 1;
-          return new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime();
+          return a.id.localeCompare(b.id);
         }),
       };
       map.get(group)!.push(sortedCat);
@@ -105,7 +105,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
           if (idxA !== -1 && idxB !== -1) return idxA - idxB;
           if (idxA !== -1) return -1;
           if (idxB !== -1) return 1;
-          return new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime();
+          return a.id.localeCompare(b.id);
         });
         const original = cats.reduce((s, c) => s + c.lineItems.reduce((a, li) => a + li.originalBudget, 0), 0);
         const revised = cats.reduce((s, c) => s + c.lineItems.reduce((a, li) => a + li.revisedBudget, 0), 0);
