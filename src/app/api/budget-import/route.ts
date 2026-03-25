@@ -81,16 +81,17 @@ export async function POST(request: NextRequest) {
 
 The budget is for a real estate development project called "${project.name}" located at "${project.address}".
 
-There are exactly 4 category groups. Every subcategory MUST belong to one of these groups:
-1. "Hard Costs" — typical subcategories: Building Costs, Site Costs, Equipment, Signage, General Conditions
-2. "Soft Costs" — typical subcategories: Design Fees, Third Party DD, Entitlements, Permits & Fees, Outside Costs
-3. "Financing" — typical subcategories: Loan Fees, Interest, Closing Costs
-4. "Land" — typical subcategories: Acquisition, Due Diligence
+There are exactly 5 category groups. Every subcategory MUST belong to one of these groups:
+1. "Land" — subcategories: Acquisition, Due Diligence
+2. "Soft Costs" — subcategories: Design Fees, Entitlements, Permits & Fees, Equipment, Signage
+3. "Hard Costs" — subcategories: Construction, Site, Building Costs
+4. "Outside Costs" — subcategories: Outside Costs
+5. "Financing Costs" — subcategories: Loan Fees, Interest, Closing Costs
 
 Rules:
-- The "categoryGroup" MUST be one of exactly: "Hard Costs", "Soft Costs", "Financing", "Land"
-- The "name" is the subcategory name (e.g. "Building Costs", "Site Costs", "Design Fees", etc.)
-- Use the suggested subcategory names above when they fit. You may create other subcategory names if the data clearly calls for it, but keep them under the correct group.
+- The "categoryGroup" MUST be one of exactly: "Land", "Soft Costs", "Hard Costs", "Outside Costs", "Financing Costs"
+- The "name" is the subcategory name (e.g. "Building Costs", "Site", "Design Fees", "Construction", etc.)
+- Use the EXACT subcategory names listed above. Do NOT create alternative names (e.g. use "Site" not "Site Costs", use "Construction" not "General Conditions").
 - Place every line item under the most appropriate subcategory.
 - Each line item needs a description and a budget amount.
 - If the spreadsheet has both original and revised budgets, capture both. Otherwise set revisedBudget equal to originalBudget.

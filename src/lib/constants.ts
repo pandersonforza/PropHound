@@ -31,9 +31,12 @@ export const CATEGORY_GROUPS = [
 export const CATEGORY_GROUP_ORDER: Record<string, number> = {
   "Land": 0,
   "Soft Costs": 1,
+  "Soft Cost": 1,
   "Hard Costs": 2,
+  "Hard Cost": 2,
   "Outside Costs": 3,
   "Financing Costs": 4,
+  "Financing": 4,
 };
 
 export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
@@ -47,9 +50,12 @@ export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
 // Subcategory sort order within each group
 export const SUBCATEGORY_ORDER: Record<string, string[]> = {
   "Soft Costs": ["Design Fees", "Entitlements", "Permits & Fees", "Equipment", "Signage"],
-  "Hard Costs": ["Construction", "Site", "Building Costs"],
+  "Soft Cost": ["Design Fees", "Entitlements", "Permits & Fees", "Equipment", "Signage"],
+  "Hard Costs": ["Construction", "General Conditions", "Site", "Site Costs", "Building Costs"],
+  "Hard Cost": ["Construction", "General Conditions", "Site", "Site Costs", "Building Costs"],
   "Outside Costs": ["Outside Costs"],
   "Financing Costs": ["Loan Fees", "Interest", "Closing Costs"],
+  "Financing": ["Loan Fees", "Interest", "Closing Costs"],
   "Land": ["Acquisition", "Due Diligence"],
 };
 
@@ -119,6 +125,23 @@ export const LINE_ITEM_ORDER: Record<string, string[]> = {
     "Legal Fees", "Owners Insurance (GL & Builder Risk)", "Development Fee",
     "Travel", "Acq Fee", "Leasing Commissions", "Tenant Improvements",
     "Contingency", "Property Tax",
+  ],
+  // Aliases for old subcategory names
+  "Site Costs": [
+    "Site Demolition", "Import/Export", "Grading rough/finish", "Over Excavation",
+    "Concrete Curbing", "Concrete Gutters", "Concrete Flatwork Site",
+    "Concrete Flatwork Building", "Paving Asphalt", "Paving Base Rock",
+    "Paving Concrete", "Paint Striping", "Seal Coat", "Storm", "Water",
+    "Sewer", "Grease Interceptor", "Power", "Gas", "ISP/ Telco",
+    "Site CMU Walls", "Site Wood Fences", "Site Metal Fences",
+    "Trash Enclosure CMU", "Trash Enclosure Gates/Hardware/Bollards",
+    "Site Bollards", "Site Lighting", "Site Furnishings",
+    "Site Signage Footings", "Landscape", "Construction Survey",
+  ],
+  "General Conditions": [
+    "General Conditions", "Supervision", "Contractor Overhead", "Site Cameras",
+    "Insurance", "Traffic Control Measures", "Fencing", "Temp Utilities",
+    "Dumpsters", "Contractor Fee", "Construction Tax",
   ],
 };
 
