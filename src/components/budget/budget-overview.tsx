@@ -9,17 +9,17 @@ interface BudgetOverviewProps {
 }
 
 export function BudgetOverview({ summary }: BudgetOverviewProps) {
+  const remaining = summary.revisedBudget - summary.actualCost;
   const cards = [
     { label: "Original Budget", amount: summary.originalBudget },
-    { label: "Revised Budget", amount: summary.revisedBudget },
-    { label: "Committed", amount: summary.committedCost },
+    { label: "Current Budget", amount: summary.revisedBudget },
     { label: "Actual Cost", amount: summary.actualCost },
-    { label: "Variance", amount: summary.variance, isVariance: true },
+    { label: "Remaining", amount: remaining, isRemaining: true },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-4">
         {cards.map((card) => (
           <Card key={card.label}>
             <CardHeader className="pb-2">
@@ -28,7 +28,7 @@ export function BudgetOverview({ summary }: BudgetOverviewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {card.isVariance ? (
+              {card.isRemaining ? (
                 <CurrencyDisplay amount={card.amount} showVariance baseAmount={0} size="lg" />
               ) : (
                 <CurrencyDisplay amount={card.amount} size="lg" />
