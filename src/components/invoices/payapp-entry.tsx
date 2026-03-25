@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/utils";
 
@@ -69,6 +70,71 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
   const [approverId, setApproverId] = useState("");
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const excelInputRef = useRef<HTMLInputElement>(null);
+
+  // Download a blank template with line item descriptions
+  const handleDownloadTemplate = () => {
+    const rows = items.map((item) => ({
+      "Line Item": item.description,
+      "Category": item.categoryName,
+      "Budget": item.budget,
+      "Previously Billed": item.previouslyBilled,
+      "This Period": 0,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 18 }, { wch: 15 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pay App");
+    XLSX.writeFile(wb, `PayApp_Template_${appNumber || "blank"}.xlsx`);
+  };
+
+  // Import from Excel — match by line item description
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
+
+        let matched = 0;
+        setItems((prev) => {
+          const updated = [...prev];
+          for (const row of rows) {
+            // Try to find a matching line item by description
+            const desc = String(row["Line Item"] || row["Description"] || row["description"] || row["line item"] || "").trim();
+            const amount = parseFloat(String(row["This Period"] || row["Amount"] || row["this period"] || row["amount"] || 0)) || 0;
+
+            if (!desc || amount <= 0) continue;
+
+            // Fuzzy match: case-insensitive, trim whitespace
+            const idx = updated.findIndex(
+              (item) => item.description.toLowerCase().trim() === desc.toLowerCase()
+            );
+            if (idx >= 0) {
+              updated[idx] = { ...updated[idx], currentAmount: amount };
+              matched++;
+            }
+          }
+          return updated;
+        });
+
+        toast({
+          title: "Excel imported",
+          description: `Matched ${matched} line item${matched !== 1 ? "s" : ""} from ${rows.length} rows`,
+        });
+      } catch {
+        toast({ title: "Import failed", description: "Could not read Excel file", variant: "destructive" });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    // Reset the input so the same file can be re-imported
+    e.target.value = "";
+  };
 
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
@@ -254,6 +320,37 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                 />
               </div>
             </div>
+
+            {/* Import/Export buttons */}
+            {items.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadTemplate}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Download Template
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => excelInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  Import from Excel
+                </Button>
+                <input
+                  ref={excelInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  className="hidden"
+                  onChange={handleExcelImport}
+                />
+              </div>
+            )}
 
             {/* Line items table */}
             {loading ? (
