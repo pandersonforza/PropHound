@@ -224,7 +224,7 @@ model Invoice {
   amount           Float
   date             DateTime
   description      String?
-  filePath         String
+  filePath         String?
   status           String    @default("Pending Review")
   submittedBy      String?
   approver         String?

@@ -49,9 +49,9 @@ export async function POST(request: NextRequest) {
 
     const { vendorName, amount, date, filePath } = body;
 
-    if (!vendorName || amount === undefined || amount === null || !date || !filePath) {
+    if (!vendorName || amount === undefined || amount === null || !date) {
       return NextResponse.json(
-        { error: 'Missing required fields: vendorName, amount, date, filePath' },
+        { error: 'Missing required fields: vendorName, amount, date' },
         { status: 400 }
       );
     }
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         vendorName,
         amount,
         date: parsedDate,
-        filePath,
+        filePath: filePath ?? null,
         invoiceNumber: body.invoiceNumber ?? null,
         description: body.description ?? null,
         status: body.status ?? 'Pending Review',
