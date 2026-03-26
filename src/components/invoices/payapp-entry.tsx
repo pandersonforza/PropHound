@@ -164,6 +164,10 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     ])
       .then(([project, usersData]) => {
         setUsers(usersData);
+        if (!approverId) {
+          const defaultApprover = usersData.find((u: { id: string; name: string }) => u.name.toLowerCase().includes("porter anderson"));
+          if (defaultApprover) setApproverId(defaultApprover.id);
+        }
 
         const categories: BudgetCategory[] = project.budgetCategories || [];
         // Filter to Hard Costs group only

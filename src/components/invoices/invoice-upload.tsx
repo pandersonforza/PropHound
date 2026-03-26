@@ -146,7 +146,13 @@ export function InvoiceUpload({
       });
     fetch("/api/auth/users")
       .then((res) => res.json())
-      .then((data: UserOption[]) => setUsers(data))
+      .then((data: UserOption[]) => {
+        setUsers(data);
+        if (!approverId) {
+          const defaultApprover = data.find((u: UserOption) => u.name.toLowerCase().includes("porter anderson"));
+          if (defaultApprover) setApproverId(defaultApprover.id);
+        }
+      })
       .catch(() => {});
     if (user) {
       setSubmittedBy(user.name);
