@@ -6,16 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
 import { TrendingUp, TrendingDown, Target, DollarSign, Clock, BarChart3 } from "lucide-react";
 
 interface TrackRecordProject {
@@ -72,14 +62,6 @@ export default function TrackRecordPage() {
       </div>
     );
   }
-
-  const budgetChartData = projects
-    .filter((p) => p.finalBudget != null && p.finalCost != null)
-    .map((p) => ({
-      name: p.name.length > 15 ? p.name.slice(0, 15) + "…" : p.name,
-      variance: (p.finalCost ?? 0) - (p.finalBudget ?? 0),
-      overBudget: (p.finalCost ?? 0) > (p.finalBudget ?? 0),
-    }));
 
   return (
     <div className="p-8 space-y-6">
@@ -156,36 +138,6 @@ export default function TrackRecordPage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Budget Variance Chart */}
-          {budgetChartData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Budget Variance by Project</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={budgetChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }} />
-                      <YAxis tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                        labelStyle={{ color: "hsl(var(--foreground))" }}
-                        formatter={(value) => [formatCurrency(Number(value)), "Variance"]}
-                      />
-                      <Bar dataKey="variance" radius={[4, 4, 0, 0]}>
-                        {budgetChartData.map((entry, index) => (
-                          <Cell key={index} fill={entry.overBudget ? "#ef4444" : "#10b981"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Project Table */}
           <Card>
