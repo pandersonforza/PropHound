@@ -94,6 +94,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build full default budget structure from constants
+    const { DEFAULT_SUBCATEGORIES, LINE_ITEM_ORDER } = await import('@/lib/constants');
+
+    const categoryGroupMap: Record<string, string> = {
+      "Land": "Land",
+      "Soft Costs": "Soft Costs",
+      "Hard Costs": "Hard Costs",
+      "Outside Costs": "Outside Costs",
+      "Financing Costs": "Financing Costs",
+    };
+
+    const budgetCategories = Object.entries(DEFAULT_SUBCATEGORIES).flatMap(
+      ([groupName, subcategories]) =>
+        subcategories.map((subcat) => ({
+          name: subcat,
+          categoryGroup: categoryGroupMap[groupName] || groupName,
+          lineItems: {
+            create: (LINE_ITEM_ORDER[subcat] || []).map((desc) => ({
+              description: desc,
+              originalBudget: 0,
+              revisedBudget: 0,
+              committedCost: 0,
+              actualCost: 0,
+            })),
+          },
+        }))
+    );
+
     const project = await prisma.project.create({
       data: {
         name,
@@ -108,16 +136,11 @@ export async function POST(request: NextRequest) {
         projectGroup: body.projectGroup ?? 'Forza',
         description: body.description ?? null,
         budgetCategories: {
-          create: [
-            { name: "Hard Costs", categoryGroup: "Hard Costs" },
-            { name: "Soft Costs", categoryGroup: "Soft Costs" },
-            { name: "Financing Costs", categoryGroup: "Financing" },
-            { name: "Land & Acquisition", categoryGroup: "Land" },
-          ],
+          create: budgetCategories,
         },
       },
       include: {
-        budgetCategories: true,
+        budgetCategories: { include: { lineItems: true } },
       },
     });
 
