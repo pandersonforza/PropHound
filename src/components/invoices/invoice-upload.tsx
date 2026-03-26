@@ -434,7 +434,23 @@ export function InvoiceUpload({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
-        if (res.ok) created++;
+
+        if (res.status === 409) {
+          const dupeData = await res.json();
+          const proceed = window.confirm(
+            `${dupeData.message}\n\nDo you want to submit it anyway?`
+          );
+          if (proceed) {
+            const retryRes = await fetch("/api/invoices", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...body, skipDuplicateCheck: true }),
+            });
+            if (retryRes.ok) created++;
+          }
+        } else if (res.ok) {
+          created++;
+        }
       }
 
       toast({
@@ -500,7 +516,23 @@ export function InvoiceUpload({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
-        if (res.ok) created++;
+
+        if (res.status === 409) {
+          const dupeData = await res.json();
+          const proceed = window.confirm(
+            `${dupeData.message}\n\nDo you want to submit it anyway?`
+          );
+          if (proceed) {
+            const retryRes = await fetch("/api/invoices", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...body, skipDuplicateCheck: true }),
+            });
+            if (retryRes.ok) created++;
+          }
+        } else if (res.ok) {
+          created++;
+        }
       }
 
       toast({

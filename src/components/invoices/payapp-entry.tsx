@@ -258,11 +258,27 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         body.submittedDate = new Date().toISOString();
       }
 
-      const res = await fetch("/api/invoices", {
+      let res = await fetch("/api/invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+
+      if (res.status === 409) {
+        const dupeData = await res.json();
+        const proceed = window.confirm(
+          `${dupeData.message}\n\nDo you want to submit it anyway?`
+        );
+        if (!proceed) {
+          setStep("form");
+          return;
+        }
+        res = await fetch("/api/invoices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, skipDuplicateCheck: true }),
+        });
+      }
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
