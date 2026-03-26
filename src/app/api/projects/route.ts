@@ -85,11 +85,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { name, address, projectManager } = body;
+    const { name, address } = body;
 
-    if (!name || !address || !projectManager) {
+    if (!name || !address) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, address, projectManager' },
+        { error: 'Missing required fields: name, address' },
         { status: 400 }
       );
     }
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         startDate: body.startDate ? new Date(body.startDate) : null,
         endDate: body.endDate ? new Date(body.endDate) : null,
         totalBudget: body.totalBudget ?? 0,
-        projectManager,
+        projectManager: body.projectManager ?? '',
         projectGroup: body.projectGroup ?? 'Forza',
         description: body.description ?? null,
         budgetCategories: {
