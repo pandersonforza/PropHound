@@ -57,15 +57,15 @@ export function Logo({ size = "md", className }: LogoProps) {
   };
 
   const iconSize = {
-    sm: "h-5 w-5",
-    md: "h-6 w-6",
-    lg: "h-9 w-9",
+    sm: "h-6 w-6",
+    md: "h-8 w-8",
+    lg: "h-11 w-11",
   };
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 font-extrabold tracking-tight select-none",
+        "inline-flex items-center gap-0.5 font-extrabold tracking-tight select-none",
         sizeClasses[size],
         className
       )}
