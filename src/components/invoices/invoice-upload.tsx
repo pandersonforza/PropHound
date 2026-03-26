@@ -459,7 +459,7 @@ export function InvoiceUpload({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={`max-h-[90vh] overflow-y-auto ${step === "multi-review" ? "max-w-4xl" : "max-w-2xl"}`}>
+      <DialogContent className={`max-h-[90vh] overflow-y-auto ${step === "review" && filePath ? "max-w-6xl" : step === "multi-review" ? "max-w-4xl" : "max-w-2xl"}`}>
         <DialogHeader>
           <DialogTitle>
             {step === "upload" && "Upload Invoice"}
@@ -551,7 +551,20 @@ export function InvoiceUpload({
 
         {/* Step 3: Review */}
         {step === "review" && aiResult && (
-          <div className="space-y-4">
+          <div className={`${filePath ? "grid grid-cols-2 gap-6" : ""}`}>
+            {/* PDF Preview */}
+            {filePath && (
+              <div className="border border-border rounded-lg overflow-hidden h-[65vh]">
+                <iframe
+                  src={filePath.startsWith('http') ? `/api/invoices/file?url=${encodeURIComponent(filePath)}` : filePath}
+                  className="w-full h-full"
+                  title="Invoice PDF Preview"
+                />
+              </div>
+            )}
+
+            {/* Form fields */}
+            <div className="space-y-4 overflow-y-auto max-h-[65vh] pr-1">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="vendorName">Vendor Name</Label>
@@ -724,6 +737,7 @@ export function InvoiceUpload({
                 Submit for Approval
               </Button>
             </DialogFooter>
+            </div>{/* close form fields wrapper */}
           </div>
         )}
 
