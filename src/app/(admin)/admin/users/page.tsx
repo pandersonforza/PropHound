@@ -203,6 +203,8 @@ export default function AdminUsersPage() {
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                         u.role === "admin"
                           ? "bg-primary/20 text-primary"
+                          : u.role === "accountant"
+                          ? "bg-indigo-500/20 text-indigo-400"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
@@ -278,6 +280,7 @@ export default function AdminUsersPage() {
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
                 options={[
                   { value: "user", label: "User" },
+                  { value: "accountant", label: "Accountant" },
                   { value: "viewer", label: "Viewer" },
                   { value: "admin", label: "Admin" },
                 ]}

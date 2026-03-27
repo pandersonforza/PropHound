@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   'Pending Review': ['Submitted'],
@@ -196,8 +197,16 @@ export async function PUT(
         return NextResponse.json(invoice);
       }
 
-      // Approved → Paid
+      // Approved → Paid (admin and accountant only)
       if (currentStatus === 'Approved' && newStatus === 'Paid') {
+        const currentUser = await getCurrentUser();
+        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'accountant')) {
+          return NextResponse.json(
+            { error: 'Only admins and accountants can mark invoices as paid' },
+            { status: 403 }
+          );
+        }
+
         const invoice = await prisma.invoice.update({
           where: { id },
           data: {

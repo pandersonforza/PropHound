@@ -57,7 +57,7 @@ export function InvoiceList({
   });
   const [payAppItemsOpen, setPayAppItemsOpen] = useState(false);
   const { toast } = useToast();
-  const { user, canEdit } = useAuth();
+  const { user, canEdit, canMarkPaid } = useAuth();
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -338,7 +338,7 @@ export function InvoiceList({
                 </Button>
               </>
             )}
-            {canEdit && status === "Approved" && (
+            {canMarkPaid && status === "Approved" && (
               <Button
                 size="sm"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"

@@ -206,7 +206,7 @@ export const INVOICE_STATUSES = [
   "Paid",
 ] as const;
 
-export const USER_ROLES = ["admin", "user", "viewer"] as const;
+export const USER_ROLES = ["admin", "accountant", "user", "viewer"] as const;
 
 export const TASK_STATUSES = ["pending", "completed"] as const;
 
