@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { PROJECT_GROUPS } from "@/lib/constants";
+import { Download } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -113,6 +115,78 @@ export default function MilestonesOverviewPage() {
     }
   }
 
+  const handleExport = async () => {
+    const XLSX = await import("xlsx");
+
+    const wb = XLSX.utils.book_new();
+    const rows: (string | number)[][] = [];
+
+    // Title + filters
+    const dateLabel =
+      dateFrom || dateTo
+        ? `${dateFrom ? dateFrom.toLocaleDateString() : "Start"} – ${dateTo ? dateTo.toLocaleDateString() : "End"}`
+        : "All dates";
+    rows.push(["Milestones Overview Export"]);
+    rows.push(["Group", groupFilter, "Date Range", dateLabel]);
+    rows.push([]);
+
+    // Summary
+    rows.push(["Summary"]);
+    rows.push(["Total Expected Fees", totalExpected]);
+    rows.push(["Paid to Date", totalPaid]);
+    rows.push(["Remaining", totalRemaining]);
+    rows.push([`Milestones: ${completedCount} Completed / ${pendingCount} Pending`]);
+    rows.push([]);
+
+    // Dev Fees by Year
+    if (feesByYearData.length > 0) {
+      rows.push(["Dev Fees by Year"]);
+      rows.push(["Year", "Expected", "Paid", "Remaining"]);
+      for (const row of feesByYearData) {
+        rows.push([row.year, row.expected, row.paid, row.remaining]);
+      }
+      rows.push([
+        "Total",
+        feesByYearData.reduce((s, r) => s + r.expected, 0),
+        feesByYearData.reduce((s, r) => s + r.paid, 0),
+        feesByYearData.reduce((s, r) => s + r.remaining, 0),
+      ]);
+      rows.push([]);
+    }
+
+    // Per-project milestones
+    rows.push(["Project Milestones"]);
+    rows.push(["Project", "Address", "Milestone", "Status", "Expected Date", "Completed Date", "Dev Fee", "Paid", "Remaining"]);
+    for (const { project, milestones: pMilestones } of projectGroups.values()) {
+      for (const m of pMilestones) {
+        rows.push([
+          project.name,
+          project.address ?? "",
+          m.name,
+          m.status,
+          m.expectedDate ? new Date(m.expectedDate).toLocaleDateString() : "",
+          m.completedDate ? new Date(m.completedDate).toLocaleDateString() : "",
+          m.devFee,
+          m.paidAmount,
+          m.devFee - m.paidAmount,
+        ]);
+      }
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 14 },
+      { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Milestones");
+
+    const dateSuffix = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `milestones-overview-${dateSuffix}.xlsx`);
+  };
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center gap-4">
@@ -138,6 +212,10 @@ export default function MilestonesOverviewPage() {
           onChange={({ from, to }) => { setDateFrom(from); setDateTo(to); }}
           className="ml-2"
         />
+        <Button variant="outline" size="sm" onClick={handleExport} className="ml-auto gap-1.5">
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
       </div>
 
       {/* Dev Fees by Year */}
