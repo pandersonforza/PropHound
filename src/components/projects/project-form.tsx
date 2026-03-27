@@ -199,18 +199,6 @@ export function ProjectForm({ open, onOpenChange, project, onSuccess }: ProjectF
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="projectedOpenYear">Open Year</Label>
-              <Input
-                id="projectedOpenYear"
-                type="number"
-                min="2020"
-                max="2040"
-                value={form.projectedOpenYear}
-                onChange={(e) => setForm({ ...form, projectedOpenYear: e.target.value })}
-                placeholder="e.g. 2026"
-              />
-            </div>
           </div>
 
           <DialogFooter>

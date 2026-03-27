@@ -76,15 +76,6 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
       cell: ({ row }) => <StatusBadge status={row.original.stage} type="stage" />,
     },
     {
-      accessorKey: "projectedOpenYear",
-      header: "Open Year",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.projectedOpenYear || "—"}
-        </span>
-      ),
-    },
-    {
       id: "actions",
       header: "",
       enableSorting: false,
