@@ -76,6 +76,7 @@ export function ProjectSummaryTable({ group }: { group?: string }) {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Address</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Stage</TableHead>
               <TableHead>Budget</TableHead>
@@ -93,6 +94,9 @@ export function ProjectSummaryTable({ group }: { group?: string }) {
                     {project.name}
                   </Link>
                 </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {project.address || "—"}
+                </TableCell>
                 <TableCell>{project.tenant}</TableCell>
                 <TableCell>
                   <StatusBadge status={project.stage} type="stage" />
@@ -107,7 +111,7 @@ export function ProjectSummaryTable({ group }: { group?: string }) {
             ))}
             {projects.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
                   No projects found.
                 </TableCell>
               </TableRow>
