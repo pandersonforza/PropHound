@@ -4,6 +4,8 @@ import {
   View,
   Text,
   StyleSheet,
+  Svg,
+  Polygon,
 } from "@react-pdf/renderer";
 
 const fmt = (n: number) =>
@@ -22,7 +24,33 @@ const SLATE_50  = "#f8fafc";
 const WHITE     = "#ffffff";
 const EMERALD   = "#059669";
 const AMBER     = "#d97706";
-const ACCENT    = "#6366f1"; // indigo accent
+const ACCENT    = "#6366f1";
+
+// PropHound logo reproduced from public/logo.svg using pre-computed absolute
+// coordinates (translate(50,50) applied, second polygon rotated 20°).
+function PropHoundLogo({ size = 32 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      {/* Outer decagon — teal */}
+      <Polygon
+        points="50,12 72.2,19.2 86,37.2 86,62.8 72.2,80.8 50,88 27.8,80.8 14,62.8 14,37.2 27.8,19.2"
+        fill="#1a7a7a"
+        opacity="0.9"
+      />
+      {/* Rotated outer decagon — lighter teal */}
+      <Polygon
+        points="63,14.3 81.4,28.7 88.2,50.3 79.5,74.3 60.3,86.5 37,85.7 18.6,71.4 11.8,49.7 20.5,25.7 39.7,13.5"
+        fill="#2a9a9a"
+        opacity="0.6"
+      />
+      {/* Inner decagon — white */}
+      <Polygon
+        points="50,24 65.2,28.9 74.7,41.2 74.7,58.8 65.2,71.1 50,76 34.8,71.1 25.3,58.8 25.3,41.2 34.8,28.9"
+        fill="white"
+      />
+    </Svg>
+  );
+}
 
 const s = StyleSheet.create({
   page: {
@@ -45,7 +73,9 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  headerLeft: { flexDirection: "column", gap: 4 },
+  headerLeft: { flexDirection: "column", gap: 5 },
+  headerBrand: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerBrandName: { fontSize: 13, fontFamily: "Helvetica-Bold", color: WHITE },
   headerTitle: { fontSize: 18, fontFamily: "Helvetica-Bold", color: WHITE },
   headerSub: { fontSize: 9, color: "#94a3b8" },
   headerRight: { flexDirection: "column", alignItems: "flex-end", gap: 3 },
@@ -53,11 +83,7 @@ const s = StyleSheet.create({
   headerMetaValue: { fontSize: 8, color: WHITE },
 
   // ─── Summary cards ─────────────────────────────────────────────────────────
-  summaryRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
-  },
+  summaryRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
   summaryCard: {
     flex: 1,
     backgroundColor: SLATE_50,
@@ -72,11 +98,7 @@ const s = StyleSheet.create({
   summaryCardAmber: { borderLeftColor: AMBER },
 
   // ─── Status pills ──────────────────────────────────────────────────────────
-  statusRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 20,
-  },
+  statusRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
   pill: {
     flexDirection: "row",
     alignItems: "center",
@@ -114,11 +136,7 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     marginBottom: 2,
   },
-  th: {
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
-    color: WHITE,
-  },
+  th: { fontSize: 8, fontFamily: "Helvetica-Bold", color: WHITE },
   tr: {
     flexDirection: "row",
     paddingHorizontal: 8,
@@ -134,37 +152,23 @@ const s = StyleSheet.create({
     borderRadius: 4,
     marginTop: 2,
   },
-  td: { fontSize: 8, color: SLATE_700 },
+  td:     { fontSize: 8, color: SLATE_700 },
   tdBold: { fontSize: 8, fontFamily: "Helvetica-Bold", color: SLATE_900 },
   tdGreen: { fontSize: 8, color: EMERALD, fontFamily: "Helvetica-Bold" },
-  tdAmber: { fontSize: 8, color: AMBER, fontFamily: "Helvetica-Bold" },
+  tdAmber: { fontSize: 8, color: AMBER,   fontFamily: "Helvetica-Bold" },
   tdMuted: { fontSize: 8, color: SLATE_500 },
+  tdAddr:  { fontSize: 7, color: SLATE_500, marginTop: 2 },
 
-  // ─── Year table column widths ───────────────────────────────────────────────
+  // ─── Year table column widths ──────────────────────────────────────────────
   yearCol1: { flex: 1 },
   yearCol2: { flex: 2, textAlign: "right" },
 
-  // ─── Project milestone table column widths ────────────────────────────────
-  colProject:   { width: 90 },
+  // ─── Project milestone table column widths ─────────────────────────────────
+  colProject:   { width: 115 },
   colMilestone: { flex: 1 },
   colStatus:    { width: 54 },
   colDate:      { width: 54 },
   colMoney:     { width: 54, textAlign: "right" },
-
-  // ─── Project group header ─────────────────────────────────────────────────
-  projectHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 4,
-    marginTop: 8,
-    marginBottom: 2,
-  },
-  projectName: { fontSize: 9, fontFamily: "Helvetica-Bold", color: SLATE_700 },
-  projectMeta: { fontSize: 8, color: SLATE_500 },
 
   // ─── Footer ───────────────────────────────────────────────────────────────
   footer: {
@@ -223,9 +227,15 @@ export function MilestonesReportDocument({
     <Document title="Milestones Overview" author="PropHound">
       <Page size="A4" style={s.page} orientation="landscape">
 
-        {/* Header */}
+        {/* ── Header ── */}
         <View style={s.header}>
           <View style={s.headerLeft}>
+            {/* Brand row: logo + name */}
+            <View style={s.headerBrand}>
+              <PropHoundLogo size={28} />
+              <Text style={s.headerBrandName}>PropHound</Text>
+            </View>
+            {/* Report title */}
             <Text style={s.headerTitle}>Milestones Overview</Text>
             <Text style={s.headerSub}>
               {groupFilter === "All" ? "All Groups" : `Group: ${groupFilter}`}
@@ -239,7 +249,7 @@ export function MilestonesReportDocument({
           </View>
         </View>
 
-        {/* Summary cards */}
+        {/* ── Summary cards ── */}
         <View style={s.summaryRow}>
           <View style={s.summaryCard}>
             <Text style={s.summaryLabel}>Total Expected Fees</Text>
@@ -255,7 +265,7 @@ export function MilestonesReportDocument({
           </View>
         </View>
 
-        {/* Status pills */}
+        {/* ── Status pills ── */}
         <View style={s.statusRow}>
           <View style={[s.pill, s.pillGreen]}>
             <View style={[s.pillDot, s.pillDotGreen]} />
@@ -268,11 +278,13 @@ export function MilestonesReportDocument({
             <Text style={s.pillSub}> Pending</Text>
           </View>
           <View style={[s.pill, s.pillSlate]}>
-            <Text style={s.pillSub}>{totalMilestones} total milestones across {projectGroups.length} projects</Text>
+            <Text style={s.pillSub}>
+              {totalMilestones} total milestones across {projectGroups.length} projects
+            </Text>
           </View>
         </View>
 
-        {/* Dev Fees by Year */}
+        {/* ── Dev Fees by Year ── */}
         {feesByYearData.length > 0 && (
           <View style={s.table}>
             <Text style={s.sectionHeading}>Dev Fees by Year</Text>
@@ -285,25 +297,24 @@ export function MilestonesReportDocument({
             {feesByYearData.map((row, i) => (
               <View key={row.year} style={[s.tr, i % 2 === 1 ? s.trAlt : {}]}>
                 <Text style={[s.tdBold, s.yearCol1]}>{row.year}</Text>
-                <Text style={[s.td, s.yearCol2]}>{fmt(row.expected)}</Text>
-                <Text style={[s.tdGreen, s.yearCol2]}>{fmt(row.paid)}</Text>
-                <Text style={[s.tdAmber, s.yearCol2]}>{fmt(row.remaining)}</Text>
+                <Text style={[s.td,     s.yearCol2]}>{fmt(row.expected)}</Text>
+                <Text style={[s.tdGreen,s.yearCol2]}>{fmt(row.paid)}</Text>
+                <Text style={[s.tdAmber,s.yearCol2]}>{fmt(row.remaining)}</Text>
               </View>
             ))}
             <View style={s.trTotal}>
-              <Text style={[s.tdBold, s.yearCol1]}>Total</Text>
-              <Text style={[s.tdBold, s.yearCol2]}>{fmt(feesByYearData.reduce((s, r) => s + r.expected, 0))}</Text>
-              <Text style={[s.tdGreen, s.yearCol2]}>{fmt(feesByYearData.reduce((s, r) => s + r.paid, 0))}</Text>
-              <Text style={[s.tdAmber, s.yearCol2]}>{fmt(feesByYearData.reduce((s, r) => s + r.remaining, 0))}</Text>
+              <Text style={[s.tdBold,  s.yearCol1]}>Total</Text>
+              <Text style={[s.tdBold,  s.yearCol2]}>{fmt(feesByYearData.reduce((a, r) => a + r.expected, 0))}</Text>
+              <Text style={[s.tdGreen, s.yearCol2]}>{fmt(feesByYearData.reduce((a, r) => a + r.paid,     0))}</Text>
+              <Text style={[s.tdAmber, s.yearCol2]}>{fmt(feesByYearData.reduce((a, r) => a + r.remaining,0))}</Text>
             </View>
           </View>
         )}
 
-        {/* Project Milestones */}
+        {/* ── Project Milestones ── */}
         <View style={s.table}>
           <Text style={s.sectionHeading}>Project Milestones</Text>
 
-          {/* Column headers */}
           <View style={s.thead}>
             <Text style={[s.th, s.colProject]}>Project</Text>
             <Text style={[s.th, s.colMilestone]}>Milestone</Text>
@@ -318,32 +329,46 @@ export function MilestonesReportDocument({
           {projectGroups.map(({ project, milestones }) =>
             milestones.map((m, i) => (
               <View key={m.id} style={[s.tr, i % 2 === 1 ? s.trAlt : {}]}>
-                <Text style={[s.tdBold, s.colProject]}>
-                  {i === 0 ? project.name : ""}
-                </Text>
+
+                {/* Project name + address — only on first row of each project */}
+                <View style={s.colProject}>
+                  {i === 0 ? (
+                    <>
+                      <Text style={s.tdBold}>{project.name}</Text>
+                      {project.address ? (
+                        <Text style={s.tdAddr}>{project.address}</Text>
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
+
                 <Text style={[s.td, s.colMilestone]}>{m.name}</Text>
                 <Text style={[m.status === "Completed" ? s.tdGreen : s.tdMuted, s.colStatus]}>
                   {m.status}
                 </Text>
                 <Text style={[s.td, s.colDate]}>
-                  {m.expectedDate ? new Date(m.expectedDate).toLocaleDateString() : "—"}
+                  {m.expectedDate  ? new Date(m.expectedDate).toLocaleDateString()  : "—"}
                 </Text>
                 <Text style={[s.td, s.colDate]}>
                   {m.completedDate ? new Date(m.completedDate).toLocaleDateString() : "—"}
                 </Text>
-                <Text style={[s.td, s.colMoney]}>{fmt(m.devFee)}</Text>
-                <Text style={[s.tdGreen, s.colMoney]}>{fmt(m.paidAmount)}</Text>
-                <Text style={[s.tdAmber, s.colMoney]}>{fmt(m.devFee - m.paidAmount)}</Text>
+                <Text style={[s.td,     s.colMoney]}>{fmt(m.devFee)}</Text>
+                <Text style={[s.tdGreen,s.colMoney]}>{fmt(m.paidAmount)}</Text>
+                <Text style={[s.tdAmber,s.colMoney]}>{fmt(m.devFee - m.paidAmount)}</Text>
               </View>
             ))
           )}
         </View>
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <View style={s.footer} fixed>
           <Text style={s.footerText}>PropHound · Milestones Overview</Text>
-          <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+          <Text
+            style={s.footerText}
+            render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`}
+          />
         </View>
+
       </Page>
     </Document>
   );
