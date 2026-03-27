@@ -58,13 +58,19 @@ export default function MilestonesOverviewPage() {
     );
   }
 
-  // Get unique years from milestone projects
-  const years = [...new Set(milestones.map((m) => m.project.projectedOpenYear).filter(Boolean))].sort() as number[];
+  // Get unique years from milestone expected dates
+  const years = [...new Set(
+    milestones
+      .map((m) => m.expectedDate ? new Date(m.expectedDate).getFullYear() : null)
+      .filter(Boolean)
+  )].sort() as number[];
 
-  // Filter by year
+  // Filter by year based on milestone's expected date
   const filteredMilestones = yearFilter === "All"
     ? milestones
-    : milestones.filter((m) => String(m.project.projectedOpenYear) === yearFilter);
+    : milestones.filter((m) =>
+        m.expectedDate && String(new Date(m.expectedDate).getFullYear()) === yearFilter
+      );
 
   const totalExpected = filteredMilestones.reduce((s, m) => s + m.devFee, 0);
   const totalPaid = filteredMilestones.reduce((s, m) => s + m.paidAmount, 0);
@@ -77,11 +83,11 @@ export default function MilestonesOverviewPage() {
     { name: "Pending", value: pendingCount },
   ].filter((d) => d.value > 0);
 
-  // Dev fees by year summary
+  // Dev fees by year summary (based on milestone expected date)
   const feesByYear = new Map<number, { expected: number; paid: number }>();
   for (const m of milestones) {
-    const yr = m.project.projectedOpenYear;
-    if (!yr) continue;
+    if (!m.expectedDate) continue;
+    const yr = new Date(m.expectedDate).getFullYear();
     const existing = feesByYear.get(yr) || { expected: 0, paid: 0 };
     existing.expected += m.devFee;
     existing.paid += m.paidAmount;
