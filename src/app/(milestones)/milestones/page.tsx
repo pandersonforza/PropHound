@@ -38,6 +38,19 @@ export default function MilestonesOverviewPage() {
   const [groupFilter, setGroupFilter] = useState("All");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+
+  const handleYearClick = (year: number) => {
+    if (selectedYear === year) {
+      setSelectedYear(null);
+      setDateFrom(undefined);
+      setDateTo(undefined);
+    } else {
+      setSelectedYear(year);
+      setDateFrom(new Date(year, 0, 1));
+      setDateTo(new Date(year, 11, 31));
+    }
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -170,7 +183,7 @@ export default function MilestonesOverviewPage() {
         <DateRangePicker
           from={dateFrom}
           to={dateTo}
-          onChange={({ from, to }) => { setDateFrom(from); setDateTo(to); }}
+          onChange={({ from, to }) => { setSelectedYear(null); setDateFrom(from); setDateTo(to); }}
           className="ml-2"
         />
         <Button variant="outline" size="sm" onClick={handleExport} className="ml-auto gap-1.5">
@@ -197,8 +210,18 @@ export default function MilestonesOverviewPage() {
               </thead>
               <tbody>
                 {feesByYearData.map((row) => (
-                  <tr key={row.year} className="border-b border-border/50">
-                    <td className="py-2 pr-4 font-medium">{row.year}</td>
+                  <tr
+                    key={row.year}
+                    onClick={() => handleYearClick(row.year)}
+                    className={`border-b border-border/50 cursor-pointer transition-colors ${
+                      selectedYear === row.year
+                        ? "bg-primary/10"
+                        : "hover:bg-muted/40"
+                    }`}
+                  >
+                    <td className="py-2 pr-4 font-medium">
+                      <span className={selectedYear === row.year ? "text-primary" : ""}>{row.year}</span>
+                    </td>
                     <td className="py-2 pr-4 text-right">{formatCurrency(row.expected)}</td>
                     <td className="py-2 pr-4 text-right text-emerald-400">{formatCurrency(row.paid)}</td>
                     <td className="py-2 text-right text-amber-400">{formatCurrency(row.remaining)}</td>
