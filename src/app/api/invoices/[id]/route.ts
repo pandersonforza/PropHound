@@ -346,7 +346,38 @@ export async function DELETE(
       }
     }
 
-    await prisma.invoice.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      // If the invoice was approved/paid it already incremented actualCost —
+      // reverse that so the budget stays accurate.
+      if (existing.status === 'Approved' || existing.status === 'Paid') {
+        const isPayApp = existing.aiNotes?.includes('__payAppLineItems__');
+        if (isPayApp && existing.aiNotes) {
+          const match = existing.aiNotes.match(/__payAppLineItems__([\s\S]+)$/);
+          if (match) {
+            try {
+              const payAppItems: { lineItemId: string; amount: number }[] = JSON.parse(match[1]);
+              for (const item of payAppItems) {
+                if (item.lineItemId && item.amount > 0) {
+                  await tx.budgetLineItem.update({
+                    where: { id: item.lineItemId },
+                    data: { actualCost: { decrement: item.amount } },
+                  });
+                }
+              }
+            } catch {
+              console.warn('Failed to parse pay app line items for actualCost reversal');
+            }
+          }
+        } else if (existing.budgetLineItemId) {
+          await tx.budgetLineItem.update({
+            where: { id: existing.budgetLineItemId },
+            data: { actualCost: { decrement: existing.amount } },
+          });
+        }
+      }
+
+      await tx.invoice.delete({ where: { id } });
+    });
 
     return NextResponse.json({ message: 'Invoice deleted successfully' });
   } catch (error) {
