@@ -31,16 +31,41 @@ function MiniPieChart({
   data,
   colorMap,
   labelKey,
+  activeFilter,
+  onLegendClick,
 }: {
   title: string;
   data: ChartData[];
   colorMap: Record<string, string>;
   labelKey: string;
+  activeFilter: string | null;
+  onLegendClick: (name: string) => void;
 }) {
+  // Dim non-active slices when a filter is active
+  const pieData = data.map((d) => ({
+    ...d,
+    fill: activeFilter && activeFilter !== d.name
+      ? (colorMap[d.name] || "#94a3b8") + "40"
+      : (colorMap[d.name] || "#94a3b8"),
+  }));
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          {title}
+          {activeFilter && (
+            <span className="text-xs font-normal text-muted-foreground">
+              — {activeFilter}
+              <button
+                onClick={() => onLegendClick(activeFilter)}
+                className="ml-1 text-primary hover:underline"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-6">
@@ -48,7 +73,7 @@ function MiniPieChart({
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data}
+                  data={pieData}
                   cx="50%"
                   cy="50%"
                   innerRadius={50}
@@ -56,12 +81,11 @@ function MiniPieChart({
                   paddingAngle={4}
                   dataKey="value"
                   nameKey="name"
+                  onClick={(entry) => entry?.name && onLegendClick(entry.name as string)}
+                  style={{ cursor: "pointer" }}
                 >
-                  {data.map((entry) => (
-                    <Cell
-                      key={entry.name}
-                      fill={colorMap[entry.name] || "#94a3b8"}
-                    />
+                  {pieData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.fill} />
                   ))}
                 </Pie>
                 <Tooltip
@@ -84,18 +108,28 @@ function MiniPieChart({
                 </tr>
               </thead>
               <tbody>
-                {data.map((entry) => (
-                  <tr key={entry.name} className="border-b border-border last:border-0">
-                    <td className="py-1.5 flex items-center gap-2">
-                      <span
-                        className="inline-block h-3 w-3 rounded-full shrink-0"
-                        style={{ backgroundColor: colorMap[entry.name] || "#94a3b8" }}
-                      />
-                      {entry.name}
-                    </td>
-                    <td className="text-right py-1.5 font-medium">{entry.value}</td>
-                  </tr>
-                ))}
+                {data.map((entry) => {
+                  const isActive = activeFilter === entry.name;
+                  const isDimmed = activeFilter && !isActive;
+                  return (
+                    <tr
+                      key={entry.name}
+                      onClick={() => onLegendClick(entry.name)}
+                      className={`border-b border-border last:border-0 cursor-pointer transition-colors ${
+                        isActive ? "bg-primary/10" : "hover:bg-muted/40"
+                      } ${isDimmed ? "opacity-40" : ""}`}
+                    >
+                      <td className="py-1.5 flex items-center gap-2">
+                        <span
+                          className="inline-block h-3 w-3 rounded-full shrink-0"
+                          style={{ backgroundColor: colorMap[entry.name] || "#94a3b8" }}
+                        />
+                        <span className={isActive ? "font-medium" : ""}>{entry.name}</span>
+                      </td>
+                      <td className="text-right py-1.5 font-medium">{entry.value}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -105,7 +139,19 @@ function MiniPieChart({
   );
 }
 
-export function ProjectStatusChart({ group }: { group?: string }) {
+export function ProjectStatusChart({
+  group,
+  activeStatusFilter,
+  activeStageFilter,
+  onStatusClick,
+  onStageClick,
+}: {
+  group?: string;
+  activeStatusFilter?: string | null;
+  activeStageFilter?: string | null;
+  onStatusClick?: (status: string) => void;
+  onStageClick?: (stage: string) => void;
+}) {
   const [statusData, setStatusData] = useState<ChartData[]>([]);
   const [stageData, setStageData] = useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -169,6 +215,8 @@ export function ProjectStatusChart({ group }: { group?: string }) {
         data={statusData}
         colorMap={STATUS_CHART_COLORS}
         labelKey="Status"
+        activeFilter={activeStatusFilter ?? null}
+        onLegendClick={onStatusClick ?? (() => {})}
       />
       {stageData.length > 0 && (
         <MiniPieChart
@@ -176,6 +224,8 @@ export function ProjectStatusChart({ group }: { group?: string }) {
           data={stageData}
           colorMap={STAGE_CHART_COLORS}
           labelKey="Stage"
+          activeFilter={activeStageFilter ?? null}
+          onLegendClick={onStageClick ?? (() => {})}
         />
       )}
     </div>

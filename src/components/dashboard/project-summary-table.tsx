@@ -26,7 +26,15 @@ interface ProjectWithAggregates extends Project {
   };
 }
 
-export function ProjectSummaryTable({ group }: { group?: string }) {
+export function ProjectSummaryTable({
+  group,
+  statusFilter,
+  stageFilter,
+}: {
+  group?: string;
+  statusFilter?: string | null;
+  stageFilter?: string | null;
+}) {
   const [projects, setProjects] = useState<ProjectWithAggregates[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -49,6 +57,18 @@ export function ProjectSummaryTable({ group }: { group?: string }) {
     fetchProjects();
   }, [group]);
 
+  const displayed = projects.filter((p) => {
+    if (statusFilter && p.status !== statusFilter) return false;
+    if (stageFilter && p.stage !== stageFilter) return false;
+    return true;
+  });
+
+  const tableTitle = statusFilter
+    ? `${statusFilter} Projects`
+    : stageFilter
+    ? `${stageFilter} Projects`
+    : "All Projects";
+
   if (isLoading) {
     return (
       <Card>
@@ -69,7 +89,7 @@ export function ProjectSummaryTable({ group }: { group?: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>All Projects</CardTitle>
+        <CardTitle>{tableTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
@@ -84,7 +104,7 @@ export function ProjectSummaryTable({ group }: { group?: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {projects.map((project) => (
+            {displayed.map((project) => (
               <TableRow key={project.id}>
                 <TableCell>
                   <Link
@@ -109,7 +129,7 @@ export function ProjectSummaryTable({ group }: { group?: string }) {
                 </TableCell>
               </TableRow>
             ))}
-            {projects.length === 0 && (
+            {displayed.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
                   No projects found.
