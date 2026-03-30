@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 // One-time fix: recalculate actualCost for the Civil line item in H7B CA0003
 // based only on invoices that currently exist (Approved or Paid).
 // DELETE this route after running it.
-export async function POST() {
+export async function GET() {
   // Find the H7B CA0003 project
   const project = await prisma.project.findFirst({
     where: { name: { contains: "CA0003" } },
