@@ -1,42 +1,41 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// One-time fix: recalculate actualCost for the Civil line item in H7B CA0003
-// based only on invoices that currently exist (Approved or Paid).
-// DELETE this route after running it.
+// Debug + fix: lists all non-zero actuals in H7B CA0003, then zeros any Civil line item found.
 export async function GET() {
-  // Find the H7B CA0003 project
   const project = await prisma.project.findFirst({
     where: { name: { contains: "CA0003" } },
     select: { id: true, name: true },
   });
 
   if (!project) {
-    return NextResponse.json({ error: "Project CA0003 not found" }, { status: 404 });
+    // Return all project names so we can see the exact name
+    const allProjects = await prisma.project.findMany({ select: { id: true, name: true } });
+    return NextResponse.json({ error: "Project CA0003 not found", allProjects }, { status: 404 });
   }
 
-  // Find the Civil line item in that project
-  const lineItem = await prisma.budgetLineItem.findFirst({
-    where: {
-      description: { contains: "Civil", mode: "insensitive" },
-      category: { projectId: project.id },
-    },
+  // List every line item in this project with its current actualCost
+  const lineItems = await prisma.budgetLineItem.findMany({
+    where: { category: { projectId: project.id } },
     select: { id: true, description: true, actualCost: true },
+    orderBy: { description: "asc" },
   });
 
-  if (!lineItem) {
-    return NextResponse.json({ error: "Civil line item not found in CA0003" }, { status: 404 });
+  // Zero out any line item whose description contains "civil" (case-insensitive)
+  const civilItems = lineItems.filter((li) =>
+    li.description.toLowerCase().includes("civil")
+  );
+
+  for (const li of civilItems) {
+    await prisma.budgetLineItem.update({
+      where: { id: li.id },
+      data: { actualCost: 0 },
+    });
   }
-
-  await prisma.budgetLineItem.update({
-    where: { id: lineItem.id },
-    data: { actualCost: 0 },
-  });
 
   return NextResponse.json({
     project: project.name,
-    lineItem: lineItem.description,
-    before: lineItem.actualCost,
-    after: 0,
+    civilItemsZeroed: civilItems.map((li) => ({ description: li.description, before: li.actualCost })),
+    allLineItemsWithActuals: lineItems.filter((li) => li.actualCost > 0),
   });
 }
