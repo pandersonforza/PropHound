@@ -71,6 +71,7 @@ export interface PortfolioKPIs {
   budgetVariance: number;
   budgetVariancePercent: number;
   monthlyPaid?: number;
+  completedThisYear?: number;
 }
 
 export interface BudgetSummary {

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
-import { DollarSign, TrendingUp, Building2 } from "lucide-react";
+import { DollarSign, TrendingUp, Building2, CheckCircle2 } from "lucide-react";
 import type { PortfolioKPIs } from "@/types";
 
 interface KPICardsProps {
@@ -30,10 +30,17 @@ export function KPICards({ data }: KPICardsProps) {
       icon: Building2,
       subtitle: `of ${data.totalProjects} total`,
     },
+    {
+      title: `Completed This Year`,
+      value: null,
+      count: data.completedThisYear ?? 0,
+      icon: CheckCircle2,
+      subtitle: `in ${new Date().getFullYear()}`,
+    },
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-4">
       {cards.map((card) => (
         <Card key={card.title}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

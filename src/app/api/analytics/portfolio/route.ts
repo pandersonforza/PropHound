@@ -7,7 +7,11 @@ export async function GET(request: NextRequest) {
     const projectWhere = group ? { projectGroup: group } : {};
 
     // Run queries in parallel for speed
-    const [projects, paidThisMonth] = await Promise.all([
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(currentYear, 0, 1);
+    const yearEnd = new Date(currentYear + 1, 0, 1);
+
+    const [projects, completedThisYear, paidThisMonth] = await Promise.all([
       prisma.project.findMany({
         where: projectWhere,
         select: {
@@ -30,6 +34,13 @@ export async function GET(request: NextRequest) {
             where: { status: { in: ['Approved', 'Paid'] } },
             select: { amount: true },
           },
+        },
+      }),
+      prisma.project.count({
+        where: {
+          ...projectWhere,
+          status: 'Completed',
+          updatedAt: { gte: yearStart, lt: yearEnd },
         },
       }),
       prisma.invoice.aggregate({
@@ -101,6 +112,7 @@ export async function GET(request: NextRequest) {
       totalProjects: projects.length,
       projectCount: projects.length,
       activeProjects,
+      completedThisYear,
       totalDrawsFunded: 0,
       budgetVariance: totalBudget - totalSpent,
       budgetVariancePercent: totalBudget > 0 ? ((totalBudget - totalSpent) / totalBudget) * 100 : 0,
