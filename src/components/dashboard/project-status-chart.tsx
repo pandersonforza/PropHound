@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PROJECT_STAGES } from "@/lib/constants";
 
 interface ChartData {
   name: string;
@@ -130,7 +131,11 @@ export function ProjectStatusChart({ group }: { group?: string }) {
         }
 
         setStatusData(Object.entries(statusCounts).map(([name, value]) => ({ name, value })));
-        setStageData(Object.entries(stageCounts).map(([name, value]) => ({ name, value })));
+        setStageData(
+          PROJECT_STAGES
+            .filter((s) => stageCounts[s] !== undefined)
+            .map((s) => ({ name: s, value: stageCounts[s] }))
+        );
       } catch {
         // silently handle
       } finally {
