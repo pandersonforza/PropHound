@@ -134,7 +134,6 @@ export async function POST(request: NextRequest) {
         totalBudget: body.totalBudget ?? 0,
         projectManager: body.projectManager ?? '',
         projectGroup: body.projectGroup ?? 'Forza',
-        projectedOpenYear: body.projectedOpenYear ? parseInt(body.projectedOpenYear) : null,
         description: body.description ?? null,
         budgetCategories: {
           create: budgetCategories,

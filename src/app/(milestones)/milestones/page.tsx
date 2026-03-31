@@ -27,7 +27,7 @@ interface MilestoneWithProject {
   expectedDate: string | null;
   completedDate: string | null;
   status: string;
-  project: { id: string; name: string; address: string; status: string; projectedOpenYear: number | null };
+  project: { id: string; name: string; address: string; status: string };
 }
 
 const PIE_COLORS = ["#10b981", "#64748b"];
