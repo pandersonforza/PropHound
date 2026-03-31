@@ -40,11 +40,9 @@ export function DataTable<TData, TValue>({
   searchPlaceholder = "Search...",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = React.useState("");
-  const [pageSize, setPageSize] = React.useState(10);
+  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 });
 
   const multiSearchKeys = searchKeys || (searchKey ? [searchKey] : []);
   const useGlobalSearch = multiSearchKeys.length > 1;
@@ -70,6 +68,7 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onPaginationChange: setPagination,
     ...(useGlobalSearch && {
       globalFilterFn,
       onGlobalFilterChange: setGlobalFilter,
@@ -78,17 +77,14 @@ export function DataTable<TData, TValue>({
       sorting,
       columnFilters,
       ...(useGlobalSearch && { globalFilter }),
-      pagination: {
-        pageIndex: 0,
-        pageSize,
-      },
+      pagination,
     },
   });
 
   // Reset to first page on filter/pageSize change
   React.useEffect(() => {
-    table.setPageIndex(0);
-  }, [columnFilters, globalFilter, pageSize, table]);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [columnFilters, globalFilter]);
 
   const hasSearch = multiSearchKeys.length > 0;
 
@@ -178,11 +174,9 @@ export function DataTable<TData, TValue>({
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Rows per page:</span>
           <select
-            value={pageSize}
+            value={pagination.pageSize}
             onChange={(e) => {
-              const size = Number(e.target.value);
-              setPageSize(size);
-              table.setPageSize(size);
+              setPagination({ pageIndex: 0, pageSize: Number(e.target.value) });
             }}
             className="h-8 rounded-md border border-border bg-background px-2 text-sm"
           >
