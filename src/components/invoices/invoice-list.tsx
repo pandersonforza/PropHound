@@ -460,9 +460,9 @@ export function InvoiceList({
 
         {/* Expanded filter row */}
         {filtersOpen && (
-          <div className="flex items-center gap-3 flex-wrap p-3 rounded-lg border border-border bg-muted/20">
-            <div className="flex items-center gap-2 min-w-[200px]">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">Vendor</label>
+          <div className="flex items-center gap-4 flex-wrap p-3 rounded-lg border border-border bg-muted/20">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Vendor</label>
               <SelectNative
                 value={vendorFilter}
                 onChange={(e) => setVendorFilter(e.target.value)}
@@ -470,11 +470,11 @@ export function InvoiceList({
                   { value: "", label: "All vendors" },
                   ...uniqueVendors.map((v) => ({ value: v, label: v })),
                 ]}
-                className="h-8 text-sm"
+                className="w-[200px]"
               />
             </div>
-            <div className="flex items-center gap-2 min-w-[240px]">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">Line Item</label>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Line Item</label>
               <SelectNative
                 value={lineItemFilter}
                 onChange={(e) => setLineItemFilter(e.target.value)}
@@ -482,7 +482,7 @@ export function InvoiceList({
                   { value: "", label: "All line items" },
                   ...uniqueLineItems.map(([label, value]) => ({ value, label })),
                 ]}
-                className="h-8 text-sm"
+                className="w-[280px]"
               />
             </div>
           </div>
