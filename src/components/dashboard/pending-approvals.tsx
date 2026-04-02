@@ -38,7 +38,7 @@ interface Invoice {
   filePath: string | null;
   aiNotes: string | null;
   rejectionReason: string | null;
-  project: { id: string; name: string } | null;
+  project: { id: string; name: string; address: string } | null;
   lineItem: {
     id: string;
     description: string;
@@ -309,6 +309,9 @@ export function PendingApprovals() {
                     {viewingInvoice.project && (
                       <div className="text-sm text-muted-foreground">
                         Project: <span className="text-foreground font-medium">{viewingInvoice.project.name}</span>
+                        {viewingInvoice.project.address && (
+                          <span className="ml-1">— {viewingInvoice.project.address}</span>
+                        )}
                       </div>
                     )}
                     {viewingInvoice.lineItem && (
