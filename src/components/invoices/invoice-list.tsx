@@ -18,14 +18,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
-import { Plus, ExternalLink, Trash2, DollarSign, FileText, ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
+import { Plus, ExternalLink, Trash2, DollarSign, FileText, SlidersHorizontal, X } from "lucide-react";
 import { SelectNative } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
+import { InvoiceApprovalDialog } from "@/components/invoices/invoice-approval-dialog";
 import type { InvoiceWithRelations } from "@/types";
 
 interface InvoiceListProps {
@@ -45,18 +43,7 @@ export function InvoiceList({
   const [payAppOpen, setPayAppOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [rejectingInvoiceId, setRejectingInvoiceId] = useState<string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [approvingInvoice, setApprovingInvoice] = useState<InvoiceWithRelations | null>(null);
-  const [approveForm, setApproveForm] = useState({
-    vendorName: "",
-    invoiceNumber: "",
-    amount: "",
-    description: "",
-  });
-  const [payAppItemsOpen, setPayAppItemsOpen] = useState(false);
+  const [reviewingInvoice, setReviewingInvoice] = useState<InvoiceWithRelations | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<InvoiceWithRelations | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [vendorFilter, setVendorFilter] = useState<string>("");
@@ -108,45 +95,6 @@ export function InvoiceList({
     }
   };
 
-  const openApproveDialog = (invoice: InvoiceWithRelations) => {
-    setApprovingInvoice(invoice);
-    setApproveForm({
-      vendorName: invoice.vendorName,
-      invoiceNumber: invoice.invoiceNumber || "",
-      amount: String(invoice.amount),
-      description: invoice.description || "",
-    });
-    setApproveDialogOpen(true);
-  };
-
-  const handleApprove = async () => {
-    if (!approvingInvoice) return;
-    try {
-      const res = await fetch(`/api/invoices/${approvingInvoice.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "Approved",
-          vendorName: approveForm.vendorName,
-          invoiceNumber: approveForm.invoiceNumber || null,
-          amount: parseFloat(approveForm.amount),
-          description: approveForm.description || null,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to approve invoice");
-      toast({ title: "Invoice approved" });
-      setApproveDialogOpen(false);
-      setApprovingInvoice(null);
-      onMutate();
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to approve invoice",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleMarkPaid = async (invoiceId: string) => {
     try {
       const res = await fetch(`/api/invoices/${invoiceId}`, {
@@ -161,32 +109,6 @@ export function InvoiceList({
       toast({
         title: "Error",
         description: "Failed to mark invoice as paid",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleReject = async () => {
-    if (!rejectingInvoiceId) return;
-    try {
-      const res = await fetch(`/api/invoices/${rejectingInvoiceId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "Rejected",
-          rejectionReason: rejectionReason.trim(),
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to reject invoice");
-      toast({ title: "Invoice rejected" });
-      setRejectDialogOpen(false);
-      setRejectingInvoiceId(null);
-      setRejectionReason("");
-      onMutate();
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to reject invoice",
         variant: "destructive",
       });
     }
@@ -343,27 +265,13 @@ export function InvoiceList({
               </>
             )}
             {canEdit && status === "Submitted" && (
-              <>
-                <Button
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  onClick={() => openApproveDialog(row.original)}
-                >
-                  Approve
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-destructive text-destructive hover:bg-destructive/10"
-                  onClick={() => {
-                    setRejectingInvoiceId(row.original.id);
-                    setRejectionReason("");
-                    setRejectDialogOpen(true);
-                  }}
-                >
-                  Reject
-                </Button>
-              </>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setReviewingInvoice(row.original)}
+              >
+                Review
+              </Button>
             )}
             {canMarkPaid && status === "Approved" && (
               <Button
@@ -519,138 +427,15 @@ export function InvoiceList({
         confirmLabel="Delete"
       />
 
-      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-        {(() => {
-          const notes = approvingInvoice?.aiNotes || "";
-          const match = notes.match(/__payAppLineItems__([\s\S]+)$/);
-          let payItems: { lineItemId: string; description: string; amount: number }[] = [];
-          if (match) { try { payItems = JSON.parse(match[1]); } catch { /* empty */ } }
-          const isPayApp = payItems.length > 0;
-
-          const pdfUrl = approvingInvoice?.filePath
-            ? approvingInvoice.filePath.startsWith('http')
-              ? `/api/invoices/file?url=${encodeURIComponent(approvingInvoice.filePath)}`
-              : approvingInvoice.filePath
-            : null;
-
-          return (
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-              <DialogHeader>
-                <DialogTitle>Approve {isPayApp ? "Pay Application" : "Invoice"}</DialogTitle>
-                <DialogDescription>
-                  Review and edit the details before approving.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className={`grid gap-6 ${pdfUrl ? "grid-cols-2" : ""}`}>
-                {/* PDF Preview — left side */}
-                {pdfUrl && (
-                  <div className="border border-border rounded-lg overflow-hidden h-[65vh]">
-                    <iframe
-                      src={pdfUrl}
-                      className="w-full h-full"
-                      title="Invoice PDF Preview"
-                    />
-                  </div>
-                )}
-
-                {/* Right side: form + pay app items */}
-                <div className="overflow-y-auto max-h-[65vh] pr-1">
-
-              <div className={isPayApp ? "space-y-4" : ""}>
-                {/* Pay App line items — left side */}
-                {isPayApp && (
-                  <div className="border border-border rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 text-sm font-medium bg-muted/30 border-b border-border">
-                      Line Items ({payItems.length})
-                    </div>
-                    <div className="max-h-[50vh] overflow-y-auto">
-                      <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-background">
-                          <tr className="border-b border-border text-left text-muted-foreground">
-                            <th className="py-1.5 px-3">Description</th>
-                            <th className="py-1.5 px-3 text-right">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {payItems.map((item, idx) => (
-                            <tr key={idx} className="border-b border-border/50">
-                              <td className="py-1.5 px-3">{item.description}</td>
-                              <td className="py-1.5 px-3 text-right">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot className="sticky bottom-0 bg-background">
-                          <tr className="border-t-2 border-primary/20 font-semibold">
-                            <td className="py-1.5 px-3">Total</td>
-                            <td className="py-1.5 px-3 text-right text-primary">
-                              ${payItems.reduce((s, i) => s + i.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Form fields — right side (or full width for regular invoices) */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="approve-vendor">Vendor Name</Label>
-                    <Input
-                      id="approve-vendor"
-                      value={approveForm.vendorName}
-                      onChange={(e) => setApproveForm({ ...approveForm, vendorName: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="approve-invoiceNumber">Invoice #</Label>
-                    <Input
-                      id="approve-invoiceNumber"
-                      value={approveForm.invoiceNumber}
-                      onChange={(e) => setApproveForm({ ...approveForm, invoiceNumber: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="approve-amount">Amount</Label>
-                    <Input
-                      id="approve-amount"
-                      type="number"
-                      step="0.01"
-                      value={approveForm.amount}
-                      onChange={(e) => setApproveForm({ ...approveForm, amount: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="approve-description">Description</Label>
-                    <Textarea
-                      id="approve-description"
-                      value={approveForm.description}
-                      onChange={(e) => setApproveForm({ ...approveForm, description: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
-                </div>
-              </div>
-
-                </div>{/* close right-side scrollable */}
-              </div>{/* close grid */}
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  onClick={handleApprove}
-                >
-                  Approve {isPayApp ? "Pay App" : "Invoice"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          );
-        })()}
-      </Dialog>
+      <InvoiceApprovalDialog
+        open={!!reviewingInvoice}
+        onOpenChange={(o) => { if (!o) setReviewingInvoice(null); }}
+        invoice={reviewingInvoice}
+        onSuccess={() => {
+          setReviewingInvoice(null);
+          onMutate();
+        }}
+      />
 
       {/* Read-only invoice view dialog */}
       <Dialog open={!!viewingInvoice} onOpenChange={(o) => { if (!o) setViewingInvoice(null); }}>
@@ -773,37 +558,6 @@ export function InvoiceList({
         })()}
       </Dialog>
 
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Invoice</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for rejecting this invoice.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="rejectionReason">Rejection Reason</Label>
-            <Textarea
-              id="rejectionReason"
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Enter reason for rejection..."
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleReject}
-            >
-              Reject Invoice
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
