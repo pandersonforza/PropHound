@@ -16,7 +16,6 @@ export const PROJECT_STATUSES = [
 
 export const PROJECT_STAGES = [
   "Pre-Development",
-  "Design",
   "Permitting",
   "Construction",
   "Closeout",
@@ -214,7 +213,6 @@ export const TASK_PRIORITIES = ["low", "medium", "high"] as const;
 
 export const STAGE_COLORS: Record<string, { bg: string; text: string }> = {
   "Pre-Development": { bg: "bg-slate-800/50", text: "text-slate-400" },
-  Design: { bg: "bg-violet-900/40", text: "text-violet-400" },
   Permitting: { bg: "bg-amber-900/40", text: "text-amber-400" },
   Construction: { bg: "bg-emerald-900/40", text: "text-emerald-400" },
   Closeout: { bg: "bg-blue-900/40", text: "text-blue-400" },

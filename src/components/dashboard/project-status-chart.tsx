@@ -20,7 +20,6 @@ const STATUS_CHART_COLORS: Record<string, string> = {
 
 const STAGE_CHART_COLORS: Record<string, string> = {
   "Pre-Development": "#64748b",
-  Design: "#a78bfa",
   Permitting: "#fbbf24",
   Construction: "#34d399",
   Closeout: "#60a5fa",
