@@ -7,57 +7,36 @@ export const maxDuration = 300;
 const APPROVER_EMAIL = 'panderson@forzacommercial.com';
 const BOT_SUBMITTER_NAME = 'Invoices';
 
-// Resend signs inbound webhooks — verify the signature to prevent spoofing
-async function verifyResendSignature(request: NextRequest, rawBody: string): Promise<boolean> {
-  const secret = process.env.RESEND_WEBHOOK_SECRET;
-  if (!secret) return true; // Skip verification if secret not configured (dev only)
-
-  const signature = request.headers.get('svix-signature');
-  const msgId = request.headers.get('svix-id');
-  const timestamp = request.headers.get('svix-timestamp');
-
-  if (!signature || !msgId || !timestamp) return false;
-
-  try {
-    const { Webhook } = await import('svix');
-    const wh = new Webhook(secret);
-    wh.verify(rawBody, {
-      'svix-id': msgId,
-      'svix-timestamp': timestamp,
-      'svix-signature': signature,
-    });
-    return true;
-  } catch {
-    return false;
-  }
+// Optional: verify that the request comes from Postmark by checking a shared secret
+// Set POSTMARK_WEBHOOK_SECRET in Vercel env vars and configure it in Postmark webhook settings
+function verifyPostmarkSecret(request: NextRequest): boolean {
+  const secret = process.env.POSTMARK_WEBHOOK_SECRET;
+  if (!secret) return true; // No secret configured — allow (set one in production)
+  return request.headers.get('x-webhook-secret') === secret;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const rawBody = await request.text();
-
-    const isValid = await verifyResendSignature(request, rawBody);
-    if (!isValid) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    if (!verifyPostmarkSecret(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = JSON.parse(rawBody);
+    const payload = await request.json();
 
-    // Resend inbound email event structure
-    const emailData = payload.data ?? payload;
-    const attachments: Array<{ filename: string; content: string; contentType: string }> =
-      emailData.attachments ?? [];
+    // Postmark inbound email payload structure:
+    // { From, Subject, Attachments: [{ Name, Content (base64), ContentType, ContentLength }] }
+    const attachments: Array<{ Name: string; Content: string; ContentType: string }> =
+      payload.Attachments ?? [];
 
-    // Filter to PDF attachments only
     const pdfAttachments = attachments.filter(
-      (a) => a.contentType === 'application/pdf' || a.filename?.toLowerCase().endsWith('.pdf')
+      (a) => a.ContentType === 'application/pdf' || a.Name?.toLowerCase().endsWith('.pdf')
     );
 
     if (pdfAttachments.length === 0) {
       return NextResponse.json({ message: 'No PDF attachments found, skipping' }, { status: 200 });
     }
 
-    // Look up the approver
+    // Look up the approver at runtime
     const approver = await prisma.user.findUnique({
       where: { email: APPROVER_EMAIL },
       select: { id: true, name: true },
@@ -72,16 +51,16 @@ export async function POST(request: NextRequest) {
 
     for (const attachment of pdfAttachments) {
       try {
-        // Decode base64 PDF and upload to Vercel Blob
-        const pdfBuffer = Buffer.from(attachment.content, 'base64');
-        const filename = attachment.filename || `invoice-${Date.now()}.pdf`;
+        const pdfBuffer = Buffer.from(attachment.Content, 'base64');
+        const filename = attachment.Name || `invoice-${Date.now()}.pdf`;
 
+        // Upload to Vercel Blob
         const blob = await put(`invoices/${Date.now()}-${filename}`, pdfBuffer, {
           access: 'public',
           contentType: 'application/pdf',
         });
 
-        // Run AI processing
+        // Run AI processing pipeline
         const processRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/invoices/process`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -109,10 +88,8 @@ export async function POST(request: NextRequest) {
         };
 
         for (const inv of processedInvoices) {
-          const isPayApp = false; // Email attachments are standard invoices
           const hasGoodMatch = inv.confidence >= 0.6 && inv.suggestedProjectId && inv.suggestedBudgetLineItemId;
 
-          // Create the invoice
           const invoice = await prisma.invoice.create({
             data: {
               vendorName: inv.vendorName,
@@ -124,10 +101,8 @@ export async function POST(request: NextRequest) {
               aiConfidence: inv.confidence,
               aiNotes: inv.reasoning,
               submittedBy: BOT_SUBMITTER_NAME,
-              // Only assign project/line item if AI is confident
               projectId: hasGoodMatch ? inv.suggestedProjectId : null,
-              budgetLineItemId: (hasGoodMatch && !isPayApp) ? inv.suggestedBudgetLineItemId : null,
-              // Always set approver and auto-submit
+              budgetLineItemId: hasGoodMatch ? inv.suggestedBudgetLineItemId : null,
               approver: approver.name,
               approverId: approver.id,
               status: 'Submitted',
@@ -138,8 +113,8 @@ export async function POST(request: NextRequest) {
           results.push({ filename, invoiceId: invoice.id, status: 'submitted' });
         }
       } catch (err) {
-        console.error('Error processing attachment', attachment.filename, err);
-        results.push({ filename: attachment.filename, status: 'error' });
+        console.error('Error processing attachment', attachment.Name, err);
+        results.push({ filename: attachment.Name, status: 'error' });
       }
     }
 
