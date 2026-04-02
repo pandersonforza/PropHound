@@ -306,6 +306,11 @@ export function PendingApprovals() {
                       <Label htmlFor="pa-desc">Description</Label>
                       <Textarea id="pa-desc" value={approveForm.description} onChange={(e) => setApproveForm({ ...approveForm, description: e.target.value })} rows={3} />
                     </div>
+                    {viewingInvoice.project && (
+                      <div className="text-sm text-muted-foreground">
+                        Project: <span className="text-foreground font-medium">{viewingInvoice.project.name}</span>
+                      </div>
+                    )}
                     {viewingInvoice.lineItem && (
                       <div className="text-sm text-muted-foreground">
                         Line item: {viewingInvoice.lineItem.category?.name} — {viewingInvoice.lineItem.description}
