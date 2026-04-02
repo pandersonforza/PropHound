@@ -6,6 +6,7 @@ import { usePortfolioAnalytics } from "@/hooks/use-analytics";
 import { KPICards } from "@/components/dashboard/kpi-cards";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PendingApprovals } from "@/components/dashboard/pending-approvals";
+import { ReturnedInvoices } from "@/components/dashboard/returned-invoices";
 import { TaskList } from "@/components/dashboard/task-list";
 import { useAuth } from "@/hooks/use-auth";
 import { PROJECT_GROUPS } from "@/lib/constants";
@@ -85,6 +86,8 @@ export default function DashboardPage() {
           <PendingApprovals />
         </div>
       )}
+
+      {canEdit && <ReturnedInvoices />}
 
       <ProjectStatusChart
         group={groupFilter}

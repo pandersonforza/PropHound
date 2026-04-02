@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get('projectId');
     const status = searchParams.get('status');
     const approverId = searchParams.get('approverId');
+    const submittedById = searchParams.get('submittedById');
+    const returned = searchParams.get('returned');
 
     const where: Record<string, unknown> = {};
 
@@ -18,6 +20,12 @@ export async function GET(request: NextRequest) {
     }
     if (approverId) {
       where.approverId = approverId;
+    }
+    if (submittedById) {
+      where.submittedById = submittedById;
+    }
+    if (returned === 'true') {
+      where.rejectionReason = { not: null };
     }
 
     const invoices = await prisma.invoice.findMany({
