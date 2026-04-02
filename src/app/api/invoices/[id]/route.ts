@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   'Pending Review': ['Submitted'],
-  'Submitted': ['Approved', 'Rejected'],
+  'Submitted': ['Approved', 'Rejected', 'Pending Review'],
   'Approved': ['Paid'],
 };
 
@@ -229,6 +229,23 @@ export async function PUT(
           data: {
             status: 'Rejected',
             rejectedDate: new Date(),
+            ...(body.rejectionReason !== undefined && { rejectionReason: body.rejectionReason }),
+          },
+          include: {
+            project: true,
+            lineItem: { include: { category: true } },
+          },
+        });
+
+        return NextResponse.json(invoice);
+      }
+
+      // Submitted → Pending Review (returned to submitter for revision)
+      if (currentStatus === 'Submitted' && newStatus === 'Pending Review') {
+        const invoice = await prisma.invoice.update({
+          where: { id },
+          data: {
+            status: 'Pending Review',
             ...(body.rejectionReason !== undefined && { rejectionReason: body.rejectionReason }),
           },
           include: {
