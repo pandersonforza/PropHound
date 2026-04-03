@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { InvoiceList } from "@/components/invoices/invoice-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { InvoiceWithRelations } from "@/types";
 
 export default function ProjectInvoicesPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const projectId = params.id as string;
+  const initialLineItem = searchParams.get("lineItem") ?? "";
 
   const [invoices, setInvoices] = useState<InvoiceWithRelations[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +53,7 @@ export default function ProjectInvoicesPage() {
       onMutate={fetchInvoices}
       showProject={false}
       projectId={projectId}
+      initialLineItemFilter={initialLineItem}
     />
   );
 }

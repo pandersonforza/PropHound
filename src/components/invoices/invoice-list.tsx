@@ -31,6 +31,7 @@ interface InvoiceListProps {
   onMutate: () => void;
   showProject?: boolean;
   projectId?: string;
+  initialLineItemFilter?: string;
 }
 
 export function InvoiceList({
@@ -38,6 +39,7 @@ export function InvoiceList({
   onMutate,
   showProject = true,
   projectId,
+  initialLineItemFilter = "",
 }: InvoiceListProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [payAppOpen, setPayAppOpen] = useState(false);
@@ -47,8 +49,8 @@ export function InvoiceList({
   const [viewingInvoice, setViewingInvoice] = useState<InvoiceWithRelations | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [vendorFilter, setVendorFilter] = useState<string>("");
-  const [lineItemFilter, setLineItemFilter] = useState<string>("");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [lineItemFilter, setLineItemFilter] = useState<string>(initialLineItemFilter);
+  const [filtersOpen, setFiltersOpen] = useState(!!initialLineItemFilter);
   const { toast } = useToast();
   const { user, canEdit, canMarkPaid } = useAuth();
 

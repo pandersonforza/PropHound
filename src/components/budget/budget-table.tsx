@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, Fragment } from "react";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -382,7 +383,14 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                               const pct = li.revisedBudget > 0 ? (li.actualCost / li.revisedBudget) * 100 : 0;
                               return (
                                 <TableRow key={li.id} className="hover:bg-muted/30">
-                                  <TableCell className="pl-16 text-muted-foreground">{li.description}</TableCell>
+                                  <TableCell className="pl-16 text-muted-foreground">
+                                    <Link
+                                      href={`/projects/${projectId}/invoices?lineItem=${li.id}`}
+                                      className="hover:underline hover:text-foreground transition-colors"
+                                    >
+                                      {li.description}
+                                    </Link>
+                                  </TableCell>
                                   <TableCell className="text-right">{formatCurrency(li.originalBudget)}</TableCell>
                                   <TableCell className="text-right">{formatCurrency(li.revisedBudget)}</TableCell>
                                   <TableCell className="text-right">
