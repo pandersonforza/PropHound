@@ -386,12 +386,41 @@ export function InvoiceUpload({
     loadProcessedFile(nextIndex, processedFiles);
   };
 
-  // "Submit" — save current + submit all reviewed invoices
-  const handleSave = async (submitForApproval = false) => {
-    const current = captureCurrentInvoice();
-    if (!current) return;
+  // Skip current invoice without saving it
+  const handleSkip = async () => {
+    const remaining = processedFiles.filter((_, i) => i !== currentFileIndex);
 
-    const allInvoices = [...reviewedInvoices, current];
+    if (remaining.length === 0) {
+      // Skipped the last/only invoice
+      if (reviewedInvoices.length === 0) {
+        toast({ title: "Invoice skipped" });
+        handleOpenChange(false);
+      } else {
+        // Save previously reviewed invoices without this one
+        await handleSave(false, true);
+      }
+    } else {
+      // More files — advance without capturing current
+      const nextIndex = Math.min(currentFileIndex, remaining.length - 1);
+      setProcessedFiles(remaining);
+      setTotalFiles(remaining.length);
+      currentFileIndexRef.current = nextIndex;
+      setCurrentFileIndex(nextIndex);
+      loadProcessedFile(nextIndex, remaining);
+    }
+  };
+
+  // "Submit" — save current + submit all reviewed invoices
+  const handleSave = async (submitForApproval = false, skipCurrent = false) => {
+    let allInvoices: ReviewedInvoice[];
+    if (skipCurrent) {
+      if (reviewedInvoices.length === 0) { handleOpenChange(false); return; }
+      allInvoices = reviewedInvoices;
+    } else {
+      const current = captureCurrentInvoice();
+      if (!current) return;
+      allInvoices = [...reviewedInvoices, current];
+    }
 
     if (submitForApproval) {
       if (!approverId || !submittedBy.trim()) {
@@ -890,16 +919,19 @@ export function InvoiceUpload({
             )}
 
             <DialogFooter>
+              <Button variant="ghost" className="mr-auto text-muted-foreground" onClick={handleSkip}>
+                Skip
+              </Button>
               <Button variant="outline" onClick={() => handleOpenChange(false)}>
                 Cancel
               </Button>
               {isLastFile ? (
                 <>
                   <Button variant="outline" onClick={() => handleSave(false)}>
-                    Save {totalFiles > 1 ? `All ${totalFiles} as Drafts` : "as Draft"}
+                    Save {reviewedInvoices.length > 0 ? `All ${reviewedInvoices.length + 1} as Drafts` : "as Draft"}
                   </Button>
                   <Button onClick={() => handleSave(true)}>
-                    Submit {totalFiles > 1 ? `All ${totalFiles}` : ""} for Approval
+                    Submit {reviewedInvoices.length > 0 ? `All ${reviewedInvoices.length + 1}` : ""} for Approval
                   </Button>
                 </>
               ) : (
