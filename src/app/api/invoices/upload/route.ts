@@ -10,11 +10,7 @@ export async function POST(request: NextRequest) {
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async (pathname) => {
-        // Validate the upload before generating a token
-        if (!pathname.endsWith('.pdf')) {
-          throw new Error('Only PDF files are accepted');
-        }
+      onBeforeGenerateToken: async (_pathname) => {
         return {
           allowedContentTypes: ['application/pdf'],
           maximumSizeInBytes: 50 * 1024 * 1024, // 50MB max
