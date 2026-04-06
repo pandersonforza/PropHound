@@ -69,6 +69,7 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
+    autoResetPageIndex: false,
     ...(useGlobalSearch && {
       globalFilterFn,
       onGlobalFilterChange: setGlobalFilter,
