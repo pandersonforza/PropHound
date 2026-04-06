@@ -24,6 +24,7 @@ import { Plus, ExternalLink, Trash2, DollarSign, FileText, SlidersHorizontal, X 
 import { SelectNative } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { InvoiceApprovalDialog } from "@/components/invoices/invoice-approval-dialog";
+import { PROJECT_GROUPS } from "@/lib/constants";
 import type { InvoiceWithRelations } from "@/types";
 
 interface InvoiceListProps {
@@ -48,6 +49,7 @@ export function InvoiceList({
   const [reviewingInvoice, setReviewingInvoice] = useState<InvoiceWithRelations | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<InvoiceWithRelations | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [groupFilter, setGroupFilter] = useState<string>("All");
   const [vendorFilter, setVendorFilter] = useState<string>("");
   const [lineItemFilter, setLineItemFilter] = useState<string>(initialLineItemFilter);
   const [filtersOpen, setFiltersOpen] = useState(!!initialLineItemFilter);
@@ -129,12 +131,14 @@ export function InvoiceList({
 
   const activeFilterCount = [
     statusFilter !== "All",
+    groupFilter !== "All",
     vendorFilter !== "",
     lineItemFilter !== "",
   ].filter(Boolean).length;
 
   const filteredInvoices = invoices.filter((inv) => {
     if (statusFilter !== "All" && inv.status !== statusFilter) return false;
+    if (groupFilter !== "All" && inv.project?.projectGroup !== groupFilter) return false;
     if (vendorFilter && inv.vendorName !== vendorFilter) return false;
     if (lineItemFilter && inv.lineItem?.id !== lineItemFilter) return false;
     return true;
@@ -359,7 +363,7 @@ export function InvoiceList({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setStatusFilter("All"); setVendorFilter(""); setLineItemFilter(""); }}
+              onClick={() => { setStatusFilter("All"); setGroupFilter("All"); setVendorFilter(""); setLineItemFilter(""); }}
               className="gap-1 text-muted-foreground"
             >
               <X className="h-3.5 w-3.5" />
@@ -367,6 +371,25 @@ export function InvoiceList({
             </Button>
           )}
         </div>
+
+        {/* Group pills — only on the global invoices page */}
+        {showProject && (
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5 w-fit">
+            {["All", ...PROJECT_GROUPS].map((g) => (
+              <button
+                key={g}
+                onClick={() => setGroupFilter(g)}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  groupFilter === g
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Expanded filter row */}
         {filtersOpen && (
