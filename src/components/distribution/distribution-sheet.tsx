@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Trash2, Printer, FileDown, ChevronRight, Upload } from "lucide-react";
+import { Plus, Trash2, FileDown, ChevronRight, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
+import { downloadDistributionPDF } from "./distribution-pdf";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -574,12 +575,54 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
 
   const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!hasResults || distributionAmount <= 0) {
+      toast({ title: "Nothing to export", description: "Add investors and a distribution amount first.", variant: "destructive" });
+      return;
+    }
+    setPdfLoading(true);
+    try {
+      await downloadDistributionPDF({
+        reportTitle,
+        projectName: project?.name,
+        projectAddress: project?.address,
+        projectGroup: project?.projectGroup,
+        generatedDate: today,
+        methodLabel: methodLabel[method],
+        holdStartDate,
+        holdEndDate,
+        holdYears,
+        distributionAmount,
+        totalContributions,
+        lpDistributed,
+        overallROI,
+        overallMultiple,
+        isWaterfall,
+        waterfallOutput,
+        simpleResults,
+        showPrefColumns,
+        wfTier1Enabled,
+        wfCatchupEnabled,
+        wfGpResidualPct,
+        wfIrrHurdlesEnabled,
+        prefReturnPct,
+        notes,
+      });
+    } catch {
+      toast({ title: "PDF generation failed", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div>
-      {/* ── Setup (print:hidden) ──────────────────────────────────────── */}
-      <div className="print:hidden space-y-6">
+      {/* ── Setup ────────────────────────────────────────────────────── */}
+      <div className="space-y-6">
 
         {/* Page header */}
         <div className="flex items-center justify-between">
@@ -593,8 +636,8 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
             <Button variant="outline" size="sm" onClick={handleExportCSV}>
               <FileDown className="h-4 w-4 mr-1.5" />Export CSV
             </Button>
-            <Button size="sm" onClick={() => window.print()}>
-              <Printer className="h-4 w-4 mr-1.5" />Print Report
+            <Button size="sm" onClick={handleDownloadPDF} disabled={pdfLoading}>
+              <FileDown className="h-4 w-4 mr-1.5" />{pdfLoading ? "Generating…" : "Download PDF"}
             </Button>
           </div>
         </div>
@@ -943,12 +986,12 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
                   )}
                 </p>
               </div>
-              <div className="print:hidden flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleExportCSV}>
                   <FileDown className="h-4 w-4 mr-1.5" />Export CSV
                 </Button>
-                <Button size="sm" onClick={() => window.print()}>
-                  <Printer className="h-4 w-4 mr-1.5" />Print Report
+                <Button size="sm" onClick={handleDownloadPDF} disabled={pdfLoading}>
+                  <FileDown className="h-4 w-4 mr-1.5" />{pdfLoading ? "Generating…" : "Download PDF"}
                 </Button>
               </div>
             </div>
@@ -1217,9 +1260,6 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
             </div>
           )}
 
-          <div className="hidden print:block text-center text-xs text-gray-400 pt-4 border-t border-gray-200">
-            Prepared with PropHound · {today}
-          </div>
         </div>
       ) : (
         <div className="mt-8 print:hidden rounded-lg border border-dashed border-border p-12 text-center">
