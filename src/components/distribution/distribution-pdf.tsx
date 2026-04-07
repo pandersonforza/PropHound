@@ -387,7 +387,7 @@ function DistributionDocument(p: DistributionPDFProps) {
                 <Text style={[s.tableCellAmber, COL.tier, { textAlign: "right" as const }]}>{wfCatchupEnabled ? usd(waterfallOutput.gp.tier3_catchup) : "—"}</Text>
                 <Text style={[s.tableCellAmber, COL.tier, { textAlign: "right" as const }]}>{usd(waterfallOutput.gp.tier4_gp)}</Text>
                 <Text style={[s.tableCellAmber, COL.total, { textAlign: "right" as const }]}>{usd(waterfallOutput.gp.total)}</Text>
-                <Text style={[s.tableCellMuted, COL.net, { textAlign: "right" as const }]}>Carried Interest</Text>
+                <Text style={[s.tableCellMuted, COL.net, { textAlign: "right" as const }]}>—</Text>
                 <Text style={[s.tableCellMuted, COL.roi, { textAlign: "right" as const }]}>—</Text>
                 <Text style={[s.tableCellMuted, COL.mult, { textAlign: "right" as const }]}>—</Text>
               </View>
