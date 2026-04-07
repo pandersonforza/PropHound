@@ -127,17 +127,17 @@ const s = StyleSheet.create({
 
   // Summary cards
   summaryRow: { flexDirection: "row", gap: 10, marginBottom: 24 },
-  summaryCard: { flex: 1, backgroundColor: C.bg, borderRadius: 6, padding: 10, borderWidth: 1, borderColor: C.border },
-  summaryCardLabel: { fontSize: 7, color: C.muted, marginBottom: 4 },
-  summaryCardValue: { fontSize: 14, fontFamily: "Helvetica-Bold", color: C.text },
-  summaryCardValueGreen: { fontSize: 14, fontFamily: "Helvetica-Bold", color: C.emerald },
-  summaryCardValueRed: { fontSize: 14, fontFamily: "Helvetica-Bold", color: C.red },
+  summaryCard: { flex: 1, backgroundColor: C.bg, borderRadius: 6, padding: 10, borderWidth: 1, borderColor: C.border, justifyContent: "center", alignItems: "center" },
+  summaryCardLabel: { fontSize: 7, color: C.muted, marginBottom: 4, textAlign: "center" as const },
+  summaryCardValue: { fontSize: 14, fontFamily: "Helvetica-Bold", color: C.text, textAlign: "center" as const },
+  summaryCardValueGreen: { fontSize: 14, fontFamily: "Helvetica-Bold", color: C.emerald, textAlign: "center" as const },
+  summaryCardValueRed: { fontSize: 14, fontFamily: "Helvetica-Bold", color: C.red, textAlign: "center" as const },
 
   // Table
   table: { borderWidth: 1, borderColor: C.border, borderRadius: 6, overflow: "hidden", marginBottom: 24 },
-  tableHeader: { flexDirection: "row", backgroundColor: C.navy, paddingHorizontal: 10, paddingVertical: 7 },
+  tableHeader: { flexDirection: "row", backgroundColor: C.navy, paddingHorizontal: 10, paddingVertical: 7, alignItems: "center" },
   tableHeaderCell: { fontSize: 7, fontFamily: "Helvetica-Bold", color: "#cbd5e1" },
-  tableRow: { flexDirection: "row", paddingHorizontal: 10, paddingVertical: 6, borderTopWidth: 1, borderTopColor: C.border },
+  tableRow: { flexDirection: "row", paddingHorizontal: 10, paddingVertical: 6, borderTopWidth: 1, borderTopColor: C.border, alignItems: "center" },
   tableRowAlt: { backgroundColor: C.bg },
   tableRowGP: { backgroundColor: C.amberBg },
   tableRowTotal: { backgroundColor: C.mutedBg, borderTopWidth: 2, borderTopColor: C.border },
