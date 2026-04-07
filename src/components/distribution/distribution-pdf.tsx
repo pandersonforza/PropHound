@@ -174,14 +174,14 @@ const s = StyleSheet.create({
 // ─── Column helpers ───────────────────────────────────────────────────────────
 
 const COL = {
-  name:   { width: "22%" },
-  capital:{ width: "14%" },
-  equity: { width: "10%" },
-  tier:   { width: "12%" },
-  total:  { width: "13%" },
-  net:    { width: "13%" },
-  roi:    { width: "10%" },
-  mult:   { width: "8%" },
+  name:   { width: "20%" },
+  capital:{ width: "13%" },
+  equity: { width: "9%" },
+  tier:   { width: "11%" },
+  total:  { width: "12%" },
+  net:    { width: "12%" },
+  roi:    { width: "9%" },
+  mult:   { width: "7%" },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ function DistributionDocument(p: DistributionPDFProps) {
 
   return (
     <Document>
-      <Page size="LETTER" orientation="landscape" style={s.page}>
+      <Page size="LETTER" style={s.page}>
 
         {/* ── Header ── */}
         <View style={s.header}>
