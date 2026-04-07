@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Trash2, Printer, FileDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Printer, FileDown, ChevronRight, Upload } from "lucide-react";
+import * as XLSX from "xlsx";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,6 +135,55 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
       .catch(() => {});
   }, [projectId]);
 
+  // ── Persist to localStorage ──────────────────────────────────────────────
+
+  // Load saved state on mount
+  useEffect(() => {
+    if (!projectId) return;
+    try {
+      const saved = localStorage.getItem(`distribution-${projectId}`);
+      if (!saved) return;
+      const s = JSON.parse(saved);
+      if (s.investors?.length) setInvestors(s.investors);
+      if (s.distributionAmount != null) setDistributionAmount(s.distributionAmount);
+      if (s.method) setMethod(s.method);
+      if (s.prefReturnPct != null) setPrefReturnPct(s.prefReturnPct);
+      if (s.holdStartDate) setHoldStartDate(s.holdStartDate);
+      if (s.holdEndDate) setHoldEndDate(s.holdEndDate);
+      if (s.wfTier1Enabled != null) setWfTier1Enabled(s.wfTier1Enabled);
+      if (s.wfCatchupEnabled != null) setWfCatchupEnabled(s.wfCatchupEnabled);
+      if (s.wfCatchupPct != null) setWfCatchupPct(s.wfCatchupPct);
+      if (s.wfGpResidualPct != null) setWfGpResidualPct(s.wfGpResidualPct);
+      if (s.wfGpName) setWfGpName(s.wfGpName);
+      if (s.wfIrrHurdlesEnabled != null) setWfIrrHurdlesEnabled(s.wfIrrHurdlesEnabled);
+      if (s.wfIrrHurdles?.length) setWfIrrHurdles(s.wfIrrHurdles);
+      if (s.reportTitle) setReportTitle(s.reportTitle);
+      if (s.notes != null) setNotes(s.notes);
+    } catch { /* ignore corrupt data */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // Save on every relevant state change (debounced 600ms)
+  useEffect(() => {
+    if (!projectId) return;
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(`distribution-${projectId}`, JSON.stringify({
+          investors, distributionAmount, method, prefReturnPct,
+          holdStartDate, holdEndDate,
+          wfTier1Enabled, wfCatchupEnabled, wfCatchupPct, wfGpResidualPct, wfGpName,
+          wfIrrHurdlesEnabled, wfIrrHurdles,
+          reportTitle, notes,
+        }));
+      } catch { /* quota exceeded etc */ }
+    }, 600);
+    return () => clearTimeout(id);
+  }, [projectId, investors, distributionAmount, method, prefReturnPct,
+      holdStartDate, holdEndDate,
+      wfTier1Enabled, wfCatchupEnabled, wfCatchupPct, wfGpResidualPct, wfGpName,
+      wfIrrHurdlesEnabled, wfIrrHurdles,
+      reportTitle, notes]);
+
   // ── Investor CRUD ────────────────────────────────────────────────────────
 
   const addInvestor = () =>
@@ -164,6 +214,67 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
     const value = parseFloat(raw) || 0;
     setWfIrrHurdles((prev) => prev.map((h) => (h.id === id ? { ...h, [field]: value } : h)));
   };
+
+  // ── Excel import ────────────────────────────────────────────────────────
+
+  const handleExcelImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ""; // reset so same file can be re-imported
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = ev.target?.result;
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+
+        if (rows.length === 0) {
+          toast({ title: "Empty sheet", description: "No data found in the first sheet.", variant: "destructive" });
+          return;
+        }
+
+        // Auto-detect columns (case-insensitive partial match)
+        const headers = Object.keys(rows[0]);
+        const find = (keywords: string[]) =>
+          headers.find((h) => keywords.some((k) => h.toLowerCase().includes(k))) ?? null;
+
+        const nameCol   = find(["name", "investor", "partner", "member"]);
+        const amountCol = find(["contribution", "capital", "amount", "invested", "invest"]);
+        const equityCol = find(["equity", "ownership", "interest", "%"]);
+
+        if (!nameCol || !amountCol) {
+          toast({
+            title: "Columns not found",
+            description: `Could not detect name/contribution columns. Headers found: ${headers.join(", ")}`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const imported: typeof investors = rows
+          .map((row) => ({
+            id: uid(),
+            name: String(row[nameCol] ?? "").trim(),
+            contribution: parseFloat(String(row[amountCol] ?? "0").replace(/[$,]/g, "")) || 0,
+            equityPct: equityCol ? parseFloat(String(row[equityCol] ?? "0").replace(/[%,]/g, "")) || 0 : 0,
+          }))
+          .filter((inv) => inv.name || inv.contribution > 0);
+
+        if (imported.length === 0) {
+          toast({ title: "No valid rows", description: "All rows were empty after parsing.", variant: "destructive" });
+          return;
+        }
+
+        setInvestors(imported);
+        toast({ title: `${imported.length} investors imported`, description: `From columns: "${nameCol}" + "${amountCol}"${equityCol ? ` + "${equityCol}"` : ""}` });
+      } catch {
+        toast({ title: "Failed to parse file", description: "Make sure it is a valid .xlsx, .xls, or .csv file.", variant: "destructive" });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }, [toast, investors]);
 
   // ── Simple calculation (existing 3 methods) ──────────────────────────────
 
@@ -500,9 +611,22 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
         <div className="rounded-lg border border-border overflow-hidden">
           <div className="bg-muted/30 px-4 py-2.5 border-b border-border flex items-center justify-between">
             <span className="text-sm font-semibold">Investors</span>
-            <Button variant="ghost" size="sm" onClick={addInvestor} className="h-7 text-xs gap-1">
-              <Plus className="h-3.5 w-3.5" />Add Investor
-            </Button>
+            <div className="flex items-center gap-1">
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  className="sr-only"
+                  onChange={handleExcelImport}
+                />
+                <span className="inline-flex items-center gap-1 h-7 px-2 text-xs font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                  <Upload className="h-3.5 w-3.5" />Import Excel
+                </span>
+              </label>
+              <Button variant="ghost" size="sm" onClick={addInvestor} className="h-7 text-xs gap-1">
+                <Plus className="h-3.5 w-3.5" />Add Investor
+              </Button>
+            </div>
           </div>
           <table className="w-full text-sm">
             <thead>
