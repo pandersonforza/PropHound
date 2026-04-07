@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,7 +100,17 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
 
   // Shared pref-return / waterfall settings
   const [prefReturnPct, setPrefReturnPct] = useState(8);
-  const [holdYears, setHoldYears] = useState(1);
+  const [holdStartDate, setHoldStartDate] = useState("");
+  const [holdEndDate, setHoldEndDate] = useState("");
+
+  // Derived hold period in years (365.25 days/yr)
+  const holdYears = useMemo(() => {
+    if (!holdStartDate || !holdEndDate) return 0;
+    const ms = new Date(holdEndDate).getTime() - new Date(holdStartDate).getTime();
+    return ms > 0 ? ms / (365.25 * 24 * 60 * 60 * 1000) : 0;
+  }, [holdStartDate, holdEndDate]);
+
+  const holdYearsLabel = holdYears > 0 ? `${fmt2(holdYears)} yr` : "—";
 
   // Waterfall-specific settings
   const [wfTier1Enabled, setWfTier1Enabled] = useState(true);
@@ -445,7 +455,7 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
   const methodLabel: Record<DistributionMethod, string> = {
     "pro-rata-contribution": "Pro-Rata by Contribution",
     "pro-rata-equity": "Pro-Rata by Equity %",
-    "preferred-return": `${prefReturnPct}% Preferred Return + Pro-Rata`,
+    "preferred-return": `${prefReturnPct}% Preferred Return + Pro-Rata${holdYears > 0 ? ` (${holdYearsLabel})` : ""}`,
     "waterfall": wfIrrHurdlesEnabled
       ? `Waterfall — ${prefReturnPct}% Pref · ${wfCatchupEnabled ? `${wfCatchupPct}% GP Catch-up · ` : ""}IRR Hurdle Tiers (${[...wfIrrHurdles].sort((a,b)=>a.irr-b.irr).map(h=>`${h.irr}%`).join(", ")})`
       : `Waterfall — ${prefReturnPct}% Pref · ${wfCatchupEnabled ? `${wfCatchupPct}% GP Catch-up · ` : ""}${100 - wfGpResidualPct}/${wfGpResidualPct} Residual`,
@@ -589,8 +599,15 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Hold Period (years)</Label>
-                    <Input type="number" min="0" step="0.25" value={holdYears} onChange={(e) => setHoldYears(parseFloat(e.target.value) || 0)} />
+                    <Label>Investment Start Date</Label>
+                    <Input type="date" value={holdStartDate} onChange={(e) => setHoldStartDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Investment End Date</Label>
+                    <Input type="date" value={holdEndDate} onChange={(e) => setHoldEndDate(e.target.value)} />
+                    {holdYears > 0 && (
+                      <p className="text-xs text-muted-foreground">{holdYearsLabel} hold</p>
+                    )}
                   </div>
                 </>
               )}
@@ -625,7 +642,7 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
                     <p className="text-sm font-medium">
                       Tier 2 — Preferred Return
                       <span className="text-muted-foreground font-normal ml-1.5">
-                        ({prefReturnPct}% × {holdYears} yr = {fmt2(prefReturnPct * holdYears)}% of capital)
+                        ({prefReturnPct}% × {holdYearsLabel} = {holdYears > 0 ? fmt2(prefReturnPct * holdYears) : "—"}% of capital)
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Investors receive their preferred return before any profit split</p>
@@ -797,6 +814,9 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
                 )}
                 <p className="text-sm text-muted-foreground print:text-gray-500 mt-0.5">
                   Generated {today} · {methodLabel[method]}
+                  {holdStartDate && holdEndDate && (
+                    <> · {new Date(holdStartDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}–{new Date(holdEndDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })} ({holdYearsLabel})</>
+                  )}
                 </p>
               </div>
               <div className="print:hidden flex items-center gap-2">
@@ -822,7 +842,7 @@ export function DistributionSheet({ projectId }: { projectId: string }) {
             if (isWaterfall && waterfallOutput && holdYears > 0) {
               const irr = waterfallOutput.realizedLpIrr;
               stats.push({
-                label: `LP Realized IRR (${holdYears}yr)`,
+                label: `LP Realized IRR (${holdYearsLabel})`,
                 value: `${irr >= 0 ? "+" : ""}${fmt2(irr)}%`,
                 color: irr >= (prefReturnPct) ? "emerald" : "red",
               });
