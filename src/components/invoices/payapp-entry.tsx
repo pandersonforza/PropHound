@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { Loader2, Upload, Download } from "lucide-react";
+import { Loader2, Upload, Download, FileText, CheckCircle, AlertCircle } from "lucide-react";
 // xlsx is dynamically imported when needed to reduce bundle size
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/utils";
@@ -49,6 +49,13 @@ interface PayAppFormItem {
   currentAmount: number;
 }
 
+interface PdfExtractedItem {
+  description: string;
+  amount: number;
+  matchedLineItemId: string | null;
+  manualLineItemId: string;
+}
+
 type Step = "form" | "saving";
 
 interface PayAppEntryProps {
@@ -57,6 +64,10 @@ interface PayAppEntryProps {
   projectId?: string;
   onSuccess: () => void;
 }
+
+// Normalize a string for comparison: lowercase, strip punctuation, then collapse whitespace
+const normalize = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
 
 export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayAppEntryProps) {
   const { toast } = useToast();
@@ -71,6 +82,10 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(true);
   const excelInputRef = useRef<HTMLInputElement>(null);
+
+  const [pdfParsing, setPdfParsing] = useState(false);
+  const [pdfItems, setPdfItems] = useState<PdfExtractedItem[]>([]);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   // Download a blank template with line item descriptions
   const handleDownloadTemplate = async () => {
@@ -102,10 +117,6 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         const wb = XLSX.read(data, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
-
-        // Normalize a string for comparison: lowercase, strip punctuation, then collapse whitespace
-        const normalize = (s: string) =>
-          s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
 
         // Pre-scan rows outside setItems so we can diagnose without state
         let rowsWithAmount = 0;
@@ -194,6 +205,114 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     e.target.value = "";
   };
 
+  // Import from PDF — parse via Claude API
+  const handlePdfImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Client-side size check: warn if > 4MB
+    if (file.size > 4 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "PDF must be smaller than 4MB. Please reduce the file size and try again.",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const dataUrl = evt.target?.result as string;
+      // Strip the data:...;base64, prefix
+      const base64 = dataUrl.split(",")[1];
+
+      setPdfParsing(true);
+      try {
+        const res = await fetch("/api/payapp/parse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pdf: base64 }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as { error?: string }).error || "Failed to parse PDF");
+        }
+
+        const data = await res.json() as { items: Array<{ description: string; amount: number }> };
+        const extractedItems = data.items ?? [];
+
+        // Match each extracted item against budget line items
+        let autoMatched = 0;
+        const matched: PdfExtractedItem[] = extractedItems.map((extracted) => {
+          const descNorm = normalize(extracted.description);
+
+          // 1. Exact normalized match
+          let found = items.find((item) => normalize(item.description) === descNorm);
+
+          // 2. Fallback: substring match
+          if (!found) {
+            found = items.find(
+              (item) =>
+                normalize(item.description).includes(descNorm) ||
+                descNorm.includes(normalize(item.description))
+            );
+          }
+
+          if (found) autoMatched++;
+
+          return {
+            description: extracted.description,
+            amount: extracted.amount,
+            matchedLineItemId: found ? found.lineItemId : null,
+            manualLineItemId: "",
+          };
+        });
+
+        setPdfItems(matched);
+        toast({
+          title: "PDF parsed",
+          description: `Extracted ${matched.length} item${matched.length !== 1 ? "s" : ""}, ${autoMatched} matched automatically`,
+        });
+      } catch (err) {
+        toast({
+          title: "PDF import failed",
+          description: err instanceof Error ? err.message : "Could not parse PDF",
+          variant: "destructive",
+        });
+      } finally {
+        setPdfParsing(false);
+      }
+    };
+    reader.readAsDataURL(file);
+    // Reset the input so the same file can be re-imported
+    e.target.value = "";
+  };
+
+  // Apply PDF extracted items to the grid
+  const applyPdfItems = () => {
+    let applied = 0;
+    setItems((prev) => {
+      const updated = [...prev];
+      for (const pdfItem of pdfItems) {
+        const targetId = pdfItem.matchedLineItemId ?? pdfItem.manualLineItemId;
+        if (!targetId) continue;
+        const idx = updated.findIndex((item) => item.lineItemId === targetId);
+        if (idx >= 0) {
+          updated[idx] = { ...updated[idx], currentAmount: pdfItem.amount };
+          applied++;
+        }
+      }
+      return updated;
+    });
+    setPdfItems([]);
+    toast({
+      title: "Applied to grid",
+      description: `Updated ${applied} line item${applied !== 1 ? "s" : ""} from PDF`,
+    });
+  };
+
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
       if (!isOpen) {
@@ -203,6 +322,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         setPeriodTo(new Date().toISOString().split("T")[0]);
         setApproverId("");
         setItems([]);
+        setPdfItems([]);
       }
       onOpenChange(isOpen);
     },
@@ -336,7 +456,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to create pay app");
+        throw new Error((err as { error?: string }).error || "Failed to create pay app");
       }
 
       toast({
@@ -365,6 +485,12 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     if (!grouped.has(item.categoryName)) grouped.set(item.categoryName, []);
     grouped.get(item.categoryName)!.push(item);
   }
+
+  // All budget line items as flat options for the unmatched dropdown
+  const allLineItemOptions = items.map((item) => ({
+    value: item.lineItemId,
+    label: `${item.categoryName} › ${item.description}`,
+  }));
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -437,6 +563,32 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                   accept=".xlsx,.xls,.csv"
                   className="hidden"
                   onChange={handleExcelImport}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => pdfInputRef.current?.click()}
+                  disabled={pdfParsing}
+                >
+                  {pdfParsing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      Parsing PDF...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-1" />
+                      Upload Pay App PDF
+                    </>
+                  )}
+                </Button>
+                <input
+                  ref={pdfInputRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={handlePdfImport}
                 />
               </div>
             )}
@@ -526,6 +678,80 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                     </tr>
                   </tfoot>
                 </table>
+              </div>
+            )}
+
+            {/* PDF Extracted Items section */}
+            {pdfItems.length > 0 && (
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border">
+                  <span className="text-sm font-semibold text-foreground">PDF Extracted Items</span>
+                  <Button type="button" size="sm" onClick={applyPdfItems}>
+                    Apply to Grid
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/20 text-left text-muted-foreground">
+                        <th className="py-2 px-3">Description</th>
+                        <th className="py-2 px-3 text-right w-32">Amount</th>
+                        <th className="py-2 px-3 w-24">Status</th>
+                        <th className="py-2 px-3">Budget Line Item</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pdfItems.map((pdfItem, idx) => {
+                        const matchedItem = pdfItem.matchedLineItemId
+                          ? items.find((i) => i.lineItemId === pdfItem.matchedLineItemId)
+                          : null;
+                        return (
+                          <tr key={idx} className="border-b border-border/50 hover:bg-muted/20">
+                            <td className="py-1.5 px-3 text-foreground">{pdfItem.description}</td>
+                            <td className="py-1.5 px-3 text-right">{formatCurrency(pdfItem.amount)}</td>
+                            <td className="py-1.5 px-3">
+                              {matchedItem ? (
+                                <span className="flex items-center gap-1 text-green-500">
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span className="text-xs">Matched</span>
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-yellow-500">
+                                  <AlertCircle className="h-4 w-4" />
+                                  <span className="text-xs">Unmatched</span>
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-1.5 px-3">
+                              {matchedItem ? (
+                                <span className="text-muted-foreground text-xs">
+                                  {matchedItem.categoryName} › {matchedItem.description}
+                                </span>
+                              ) : (
+                                <SelectNative
+                                  value={pdfItem.manualLineItemId}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setPdfItems((prev) =>
+                                      prev.map((p, i) =>
+                                        i === idx ? { ...p, manualLineItemId: val } : p
+                                      )
+                                    );
+                                  }}
+                                  placeholder="Select a line item..."
+                                  options={allLineItemOptions}
+                                />
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground px-3 py-2 border-t border-border">
+                  Unmatched items without a selection will be skipped
+                </p>
               </div>
             )}
 
