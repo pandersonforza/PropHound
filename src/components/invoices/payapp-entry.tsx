@@ -205,34 +205,36 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     e.target.value = "";
   };
 
-  // Import from PDF — parse via Claude API
+  // Import from PDF — upload to Vercel Blob, then parse via Claude API
   const handlePdfImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Client-side size check: warn if > 4MB
-    if (file.size > 4 * 1024 * 1024) {
+    // Client-side size check (Vercel Blob supports up to 500MB)
+    if (file.size > 50 * 1024 * 1024) {
       toast({
         title: "File too large",
-        description: "PDF must be smaller than 4MB. Please reduce the file size and try again.",
+        description: "PDF must be smaller than 50MB.",
         variant: "destructive",
       });
       e.target.value = "";
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const dataUrl = evt.target?.result as string;
-      // Strip the data:...;base64, prefix
-      const base64 = dataUrl.split(",")[1];
-
-      setPdfParsing(true);
+    setPdfParsing(true);
+    (async () => {
       try {
+        // Upload directly to Vercel Blob (bypasses the 4.5MB serverless body limit)
+        const { upload } = await import("@vercel/blob/client");
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/invoices/upload",
+        });
+
         const res = await fetch("/api/payapp/parse", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pdf: base64 }),
+          body: JSON.stringify({ filePath: blob.url }),
         });
 
         if (!res.ok) {
@@ -284,8 +286,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
       } finally {
         setPdfParsing(false);
       }
-    };
-    reader.readAsDataURL(file);
+    })();
     // Reset the input so the same file can be re-imported
     e.target.value = "";
   };
