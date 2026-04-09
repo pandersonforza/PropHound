@@ -6,27 +6,24 @@ export const maxDuration = 60;
 export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.error("[api/payapp/parse] ANTHROPIC_API_KEY is not set");
-    return NextResponse.json({ error: "Anthropic API key not configured" }, { status: 500 });
+    console.error("[payapp/parse] ANTHROPIC_API_KEY not set");
+    return NextResponse.json({ error: "Anthropic API key not configured on server" }, { status: 500 });
   }
 
-  // Read PDF from multipart FormData
-  let pdfBuffer: Buffer;
+  let pdf: string;
   try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    const body = await request.json() as { pdf?: string };
+    if (!body.pdf || typeof body.pdf !== "string") {
+      return NextResponse.json({ error: "Missing pdf field in request body" }, { status: 400 });
     }
-    pdfBuffer = Buffer.from(await file.arrayBuffer());
+    pdf = body.pdf;
   } catch {
-    return NextResponse.json({ error: "Failed to read uploaded file" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON request body" }, { status: 400 });
   }
 
-  const base64Pdf = pdfBuffer.toString("base64");
-  const client = new Anthropic({ apiKey });
+  console.log("[payapp/parse] PDF base64 length:", pdf.length);
 
-  console.log("[api/payapp/parse] PDF size:", pdfBuffer.length, "bytes");
+  const client = new Anthropic({ apiKey });
 
   try {
     const message = await client.messages.create({
@@ -38,28 +35,22 @@ export async function POST(request: Request) {
           content: [
             {
               type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: base64Pdf,
-              },
+              source: { type: "base64", media_type: "application/pdf", data: pdf },
             },
             {
               type: "text",
               text: `You are a construction pay application (AIA G702/G703) parser.
 
-Extract the Schedule of Values line items from this pay application PDF. For each line item, extract:
-1. The description of the work
-2. The "This Period" amount (column G or equivalent — the amount being billed in the current period, NOT the total scheduled value or contract amount)
+Extract the Schedule of Values line items. For each item return:
+- description: exact text from the Schedule of Values
+- amount: the "This Period" / "Work Completed This Period" dollar amount (NOT total contract value)
 
-Return ONLY a JSON object with this exact structure, no markdown fences, no explanation:
+Return ONLY valid JSON, no markdown:
 {"items":[{"description":"string","amount":number}]}
 
-Rules:
-- Only include items where the "This Period" amount is greater than 0
-- Use the exact description from the Schedule of Values
-- Amounts should be plain numbers (no $ or commas)
-- If you cannot find a Schedule of Values or "This Period" column, return {"items":[]}`,
+Only include items where the This Period amount is greater than 0.
+Amounts must be plain numbers with no $ or commas.
+If no Schedule of Values is found, return {"items":[]}.`,
             },
           ],
         },
@@ -67,40 +58,32 @@ Rules:
     });
 
     const rawText = message.content
-      .filter((block) => block.type === "text")
-      .map((block) => (block as { type: "text"; text: string }).text)
+      .filter((b) => b.type === "text")
+      .map((b) => (b as { type: "text"; text: string }).text)
       .join("");
 
-    // Strip markdown fences if present
-    const cleaned = rawText
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```\s*$/i, "")
-      .trim();
+    console.log("[payapp/parse] Claude response:", rawText.slice(0, 300));
 
-    let parsed: { items: Array<{ description: string; amount: number }> };
+    const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+
+    let parsed: { items?: Array<{ description: string; amount: number }> };
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      console.error("[api/payapp/parse] Failed to parse Claude response:", cleaned.slice(0, 200));
-      return NextResponse.json({ error: "Claude returned invalid JSON" }, { status: 500 });
+      console.error("[payapp/parse] JSON parse failed. Raw:", cleaned.slice(0, 300));
+      return NextResponse.json({ error: `Claude returned non-JSON: ${cleaned.slice(0, 100)}` }, { status: 500 });
     }
 
     const items = (parsed.items ?? [])
-      .filter(
-        (item) =>
-          item &&
-          typeof item.description === "string" &&
-          typeof item.amount === "number" &&
-          item.amount > 0
-      )
-      .map((item) => ({ description: item.description.trim(), amount: item.amount }));
+      .filter((i) => i && typeof i.description === "string" && typeof i.amount === "number" && i.amount > 0)
+      .map((i) => ({ description: i.description.trim(), amount: i.amount }));
 
-    console.log("[api/payapp/parse] Extracted", items.length, "items");
-
+    console.log("[payapp/parse] Returning", items.length, "items");
     return NextResponse.json({ items });
+
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[api/payapp/parse] Anthropic API error:", msg);
+    console.error("[payapp/parse] Error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

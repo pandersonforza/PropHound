@@ -221,28 +221,41 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
       return;
     }
 
+    // 3 MB raw → ~4 MB base64, just under Vercel's 4.5 MB body limit
+    if (file.size > 3 * 1024 * 1024) {
+      toast({
+        title: "PDF too large",
+        description: `File is ${(file.size / 1024 / 1024).toFixed(1)} MB. Please use a PDF under 3 MB (text-based AIA PDFs are typically well under this). Try printing to PDF rather than scanning.`,
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
+    }
+
     setPdfParsing(true);
     (async () => {
       try {
-        // Send PDF as FormData — simpler and avoids Blob handshake complexity
-        const formData = new FormData();
-        formData.append("file", file);
+        // Read as base64 and send as JSON
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            resolve(dataUrl.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
 
         const res = await fetch("/api/payapp/parse", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pdf: base64 }),
         });
 
         if (!res.ok) {
-          // Read body as text first so we don't lose Vercel's 413 / plain-text errors
           const body = await res.text().catch(() => "");
           let msg = `HTTP ${res.status}`;
-          try {
-            const parsed = JSON.parse(body) as { error?: string };
-            if (parsed.error) msg = parsed.error;
-          } catch {
-            if (body) msg = body.slice(0, 200);
-          }
+          try { const j = JSON.parse(body) as { error?: string }; if (j.error) msg = j.error; } catch { if (body) msg = body.slice(0, 200); }
           throw new Error(msg);
         }
 
