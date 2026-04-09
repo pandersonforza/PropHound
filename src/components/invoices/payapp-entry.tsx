@@ -103,9 +103,9 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
 
-        // Normalize a string for comparison: lowercase, collapse whitespace, strip punctuation
+        // Normalize a string for comparison: lowercase, strip punctuation, then collapse whitespace
         const normalize = (s: string) =>
-          s.toLowerCase().replace(/\s+/g, " ").replace(/[^a-z0-9 ]/g, "").trim();
+          s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
 
         let matched = 0;
         setItems((prev) => {
