@@ -355,6 +355,22 @@ export function PipelineBoard() {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingProject, setEditingProject] = React.useState<PipelineProject | null>(null);
+  const [importing, setImporting] = React.useState(false);
+
+  const handleImportFromSheet = async () => {
+    setImporting(true);
+    try {
+      const res = await fetch("/api/pipeline/import", { method: "POST" });
+      const data = await res.json() as { imported?: number; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Import failed");
+      toast({ title: "Imported!", description: `${data.imported} projects imported from Google Sheet` });
+      fetchProjects();
+    } catch (err) {
+      toast({ title: "Import failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // Fetch
   const fetchProjects = React.useCallback(async () => {
@@ -503,8 +519,14 @@ export function PipelineBoard() {
         {/* Project list */}
         <div className="flex-1 overflow-y-auto">
           {filteredProjects.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              {search ? "No matches found" : "No projects yet"}
+            <div className="p-4 text-center text-sm text-muted-foreground space-y-3">
+              <p>{search ? "No matches found" : "No projects yet"}</p>
+              {!search && (
+                <Button size="sm" variant="outline" onClick={handleImportFromSheet} disabled={importing}>
+                  {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                  Import from Google Sheet
+                </Button>
+              )}
             </div>
           ) : (
             filteredProjects.map((project) => {
