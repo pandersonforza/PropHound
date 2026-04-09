@@ -224,17 +224,13 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     setPdfParsing(true);
     (async () => {
       try {
-        // Upload directly to Vercel Blob (bypasses the 4.5MB serverless body limit)
-        const { upload } = await import("@vercel/blob/client");
-        const blob = await upload(file.name, file, {
-          access: "public",
-          handleUploadUrl: "/api/invoices/upload",
-        });
+        // Send PDF as FormData — simpler and avoids Blob handshake complexity
+        const formData = new FormData();
+        formData.append("file", file);
 
         const res = await fetch("/api/payapp/parse", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filePath: blob.url }),
+          body: formData,
         });
 
         if (!res.ok) {

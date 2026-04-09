@@ -10,40 +10,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Anthropic API key not configured" }, { status: 500 });
   }
 
-  let filePath: string;
-  try {
-    const body = await request.json();
-    filePath = body.filePath;
-    if (!filePath || typeof filePath !== "string") {
-      return NextResponse.json({ error: "Missing or invalid filePath field" }, { status: 400 });
-    }
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  // Fetch the PDF from Vercel Blob storage
+  // Read PDF from multipart FormData
   let pdfBuffer: Buffer;
   try {
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const fetchRes = await fetch(filePath, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!fetchRes.ok) {
-      throw new Error(`Failed to fetch PDF: ${fetchRes.status} ${fetchRes.statusText}`);
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+    if (!file) {
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
-    pdfBuffer = Buffer.from(await fetchRes.arrayBuffer());
-  } catch (err) {
-    console.error("[api/payapp/parse] Failed to fetch PDF from blob:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to fetch PDF" },
-      { status: 500 }
-    );
+    pdfBuffer = Buffer.from(await file.arrayBuffer());
+  } catch {
+    return NextResponse.json({ error: "Failed to read uploaded file" }, { status: 400 });
   }
 
   const base64Pdf = pdfBuffer.toString("base64");
   const client = new Anthropic({ apiKey });
 
-  console.log("[api/payapp/parse] Sending PDF to Claude, size:", pdfBuffer.length, "bytes");
+  console.log("[api/payapp/parse] PDF size:", pdfBuffer.length, "bytes");
 
   try {
     const message = await client.messages.create({
@@ -88,8 +71,6 @@ Rules:
       .map((block) => (block as { type: "text"; text: string }).text)
       .join("");
 
-    console.log("[api/payapp/parse] Claude response length:", rawText.length);
-
     // Strip markdown fences if present
     const cleaned = rawText
       .replace(/^```(?:json)?\s*/i, "")
@@ -114,7 +95,7 @@ Rules:
       )
       .map((item) => ({ description: item.description.trim(), amount: item.amount }));
 
-    console.log("[api/payapp/parse] Extracted", items.length, "items with amount > 0");
+    console.log("[api/payapp/parse] Extracted", items.length, "items");
 
     return NextResponse.json({ items });
   } catch (err) {
