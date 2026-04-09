@@ -123,7 +123,8 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
               row["amount"] ?? row["Current"] ?? row["current"] ??
               row["Billing"] ?? row["billing"] ?? 0
             );
-            const amount = parseFloat(amountRaw) || 0;
+            // Strip currency symbols, commas, spaces before parsing (e.g. "$1,234.56" → 1234.56)
+            const amount = parseFloat(amountRaw.replace(/[$,\s]/g, "")) || 0;
 
             if (!descRaw || amount <= 0) continue;
 
@@ -149,10 +150,19 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
           return updated;
         });
 
-        toast({
-          title: "Excel imported",
-          description: `Matched ${matched} line item${matched !== 1 ? "s" : ""} from ${rows.length} rows`,
-        });
+        if (matched === 0 && rows.length > 0) {
+          const detectedCols = Object.keys(rows[0]).join(", ");
+          toast({
+            title: "No matches found",
+            description: `Found ${rows.length} rows. Detected columns: ${detectedCols}. Expected a description column (e.g. "Line Item") and amount column (e.g. "This Period").`,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Excel imported",
+            description: `Matched ${matched} line item${matched !== 1 ? "s" : ""} from ${rows.length} rows`,
+          });
+        }
       } catch {
         toast({ title: "Import failed", description: "Could not read Excel file", variant: "destructive" });
       }
