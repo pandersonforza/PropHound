@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -344,4 +344,90 @@ model BidLineItem {
   bid Bid @relation(fields: [bidId], references: [id], onDelete: Cascade)
 
   @@index([bidId])
+}
+
+model PipelineProject {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Core info
+  projectNumber String?
+  address       String
+  city          String
+  state         String?
+  dealType      String?   // "Conversion" | "GU"
+
+  // Early stage
+  siteAcceptance String?
+  milestones     String?
+  dueDiligence   String?
+
+  // Teams
+  civilPermittingTeam String?
+  architectTeam       String?
+
+  // Due diligence checks (stored as "TRUE"/"FALSE" or date string)
+  asBuilts       String?
+  altaTopo       String?
+  geotech        String?
+  phase1Testing  String?
+  asbestosTesting String?
+
+  // Signage
+  signageVendor       String?
+  signResourcePm      String?
+  sentTo7B            String?
+  signageApprovedBy7B String?
+
+  // Test Fit
+  testFitRequested String?
+  testFitCompleted String?
+  testFitApproved  String?  // mixed: date or text note
+
+  // Legal
+  loiExecuted          String?
+  titleReceived        String?
+  titleReviewed        String?
+  sir                  String?
+  initialBudget        String?
+  leaseExecuted        String?
+  rentCommencementDate String?
+
+  // Power & design
+  powerApplicationSubmitted String?
+  designKickoffCall         String?
+  designDocsApproved        String?
+
+  // Permitting
+  planningSubmittal   String?
+  planningApproved    String?
+  rowPermitsApproved  String?
+
+  // Construction documents
+  cdKickoffCall     String?
+  ispIntakeFormSent String?
+  cdSubmittedTo7B   String?
+  approved7B        String?
+  cdsSubmitted      String?
+
+  // Bidding
+  healthSubmitted     String?
+  outToBid            String?
+  prebidMeeting       String?
+  bidsDue             String?
+  finalBudgetApproved String?
+
+  // Construction
+  generalContractor String?
+  gcContractIssued  String?
+  permitsIssued     String?
+  constructionStart String?
+  turnoverCoo       String?
+  openDate          String?
+
+  // Long-form notes
+  planningApprovalProcess String?
+  buildingApprovalProcess String?
+  developmentNotes        String?
 }

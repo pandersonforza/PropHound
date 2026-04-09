@@ -6,15 +6,25 @@ import { usePathname } from "next/navigation";
 import {
   Menu,
   X,
+  LayoutList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
+import type { LucideIcon } from "lucide-react";
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon?: LucideIcon;
+  adminOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/projects", label: "Projects" },
+  { href: "/pipeline", label: "Pipeline", icon: LayoutList },
   { href: "/invoices", label: "Invoices" },
   { href: "/milestones", label: "Milestones" },
   { href: "/track-record", label: "Track Record" },
@@ -83,6 +93,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
+                {item.icon && <item.icon className="h-4 w-4 shrink-0" />}
                 {item.label}
               </Link>
             );
