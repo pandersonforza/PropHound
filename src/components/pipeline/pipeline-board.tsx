@@ -1007,18 +1007,17 @@ function ProjectDetail({
       </div>
 
       {/* Stage progress strip */}
-      <div className="shrink-0 border-b border-border bg-muted/20 px-6 py-3 overflow-x-auto">
-        <div className="flex items-center gap-0 min-w-max">
+      <div className="shrink-0 border-b border-border bg-muted/20 px-4 py-3">
+        <div className="flex items-start w-full">
           {PROGRESS_STAGES.map((s, i) => {
             const isCurrent = i === stageIdx;
             const isLast = i === PROGRESS_STAGES.length - 1;
-            // A stage is "done" if its own completion field is filled
-            // Prospect is always done (any project in the pipeline is at least a prospect)
             const field = STAGE_COMPLETION_FIELD[s];
             const isDone = s === "Prospect" || (field ? !!form[field] : false);
             return (
               <React.Fragment key={s}>
-                <div className="flex flex-col items-center gap-1">
+                {/* Stage cell — equal width */}
+                <div className="flex flex-1 flex-col items-center gap-1">
                   <div
                     className={`h-2 w-2 rounded-full border ${
                       isCurrent
@@ -1029,7 +1028,7 @@ function ProjectDetail({
                     }`}
                   />
                   <span
-                    className={`text-[10px] whitespace-nowrap font-medium ${
+                    className={`text-[10px] text-center font-medium leading-tight ${
                       isCurrent
                         ? "text-foreground"
                         : isDone
@@ -1040,9 +1039,10 @@ function ProjectDetail({
                     {s}
                   </span>
                 </div>
+                {/* Connector line between stages */}
                 {!isLast && (
                   <div
-                    className={`h-px w-6 shrink-0 -mt-3 ${
+                    className={`h-px w-4 shrink-0 mt-[3px] ${
                       isDone && !isCurrent ? "bg-green-400" : "bg-border"
                     }`}
                   />
