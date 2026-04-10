@@ -575,25 +575,15 @@ export function PipelineBoard() {
               {filteredProjects.length}
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant={meetingMode ? "default" : "outline"}
-              onClick={() => setMeetingMode((m) => !m)}
-              className={`h-7 px-2 text-xs ${meetingMode ? "bg-amber-500 hover:bg-amber-600 border-amber-500 text-white" : ""}`}
-            >
-              {meetingMode ? "Exit Meeting Mode" : "Meeting Mode"}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setDialogOpen(true)}
-              className="h-7 w-7 p-0"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="sr-only">Add project</span>
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setDialogOpen(true)}
+            className="h-7 w-7 p-0"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="sr-only">Add project</span>
+          </Button>
         </div>
 
         {/* Search */}
@@ -675,6 +665,7 @@ export function PipelineBoard() {
             onDelete={() => handleDelete(selectedProject.id)}
             onUpdated={handleProjectUpdated}
             meetingMode={meetingMode}
+            onToggleMeetingMode={() => setMeetingMode((m) => !m)}
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -713,6 +704,7 @@ function ProjectDetail({
   onDelete,
   onUpdated,
   meetingMode,
+  onToggleMeetingMode,
 }: {
   project: PipelineProject;
   idx: number;
@@ -722,6 +714,7 @@ function ProjectDetail({
   onDelete: () => void;
   onUpdated: (project: PipelineProject) => void;
   meetingMode: boolean;
+  onToggleMeetingMode: () => void;
 }) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -911,6 +904,16 @@ function ProjectDetail({
               className="h-8 w-8 p-0"
             >
               <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="border-l border-border pl-2">
+            <Button
+              size="sm"
+              variant={meetingMode ? "default" : "outline"}
+              onClick={onToggleMeetingMode}
+              className={`h-7 px-2 text-xs ${meetingMode ? "bg-amber-500 hover:bg-amber-600 border-amber-500 text-white" : ""}`}
+            >
+              {meetingMode ? "Exit Meeting Mode" : "Meeting Mode"}
             </Button>
           </div>
         </div>
