@@ -70,7 +70,7 @@ export function Sidebar({ open, onOpenChange, collapsed = false, onToggleCollaps
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden lg:flex"
+                className="hidden lg:flex translate-x-[15px]"
                 onClick={onToggleCollapsed}
                 title="Collapse sidebar"
               >
