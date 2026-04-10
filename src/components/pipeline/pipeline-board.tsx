@@ -958,11 +958,11 @@ function ProjectDetail({
           <iframe
             title="Project location"
             width="100%"
-            height="180"
+            height="250"
             style={{ display: "block" }}
             src={`https://maps.google.com/maps?q=${encodeURIComponent(
               [form.address, form.city, form.state].filter(Boolean).join(", ")
-            )}&output=embed&z=15`}
+            )}&output=embed&z=15&t=k`}
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
           />
