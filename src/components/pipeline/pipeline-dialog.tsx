@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { PipelineProject } from "./pipeline-board";
+import { PROJECT_GROUPS } from "@/lib/constants";
 
 interface PipelineDialogProps {
   open: boolean;
@@ -98,7 +99,7 @@ export function PipelineDialog({
     } else {
       setForm({});
     }
-  }, [project, open]);
+  }, [project]);
 
   const set = React.useCallback((name: string, value: string) => {
     setForm((prev) => ({ ...prev, [name]: value || null }));
@@ -155,6 +156,19 @@ export function PipelineDialog({
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Deal Type" name="dealType" value={v("dealType")} onChange={set} placeholder="Conversion or GU" />
                 <Field label="Site Acceptance" name="siteAcceptance" value={v("siteAcceptance")} onChange={set} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="projectGroup" className="text-xs">Group</Label>
+                <select
+                  id="projectGroup"
+                  value={(form.projectGroup as string | undefined) ?? "F7B"}
+                  onChange={(e) => set("projectGroup", e.target.value)}
+                  className="h-8 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {PROJECT_GROUPS.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Civil / Permitting Team" name="civilPermittingTeam" value={v("civilPermittingTeam")} onChange={set} />

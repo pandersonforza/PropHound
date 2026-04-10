@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
         state: body.state ?? null,
         projectNumber: body.projectNumber ?? null,
         dealType: body.dealType ?? null,
+        projectGroup: body.projectGroup ?? "F7B",
         siteAcceptance: body.siteAcceptance ?? null,
         milestones: body.milestones ?? null,
         dueDiligence: body.dueDiligence ?? null,

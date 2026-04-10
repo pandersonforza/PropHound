@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/use-auth";
 import { PipelineDialog } from "./pipeline-dialog";
+import { PROJECT_GROUPS } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,6 +81,7 @@ export interface PipelineProject {
   planningApprovalProcess: string | null;
   buildingApprovalProcess: string | null;
   developmentNotes: string | null;
+  projectGroup: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -412,6 +414,7 @@ export function PipelineBoard() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
   const [meetingMode, setMeetingMode] = React.useState(false);
+  const [groupFilter, setGroupFilter] = React.useState<string>("All");
 
   const handleImportFromSheet = async () => {
     setImporting(true);
@@ -440,11 +443,10 @@ export function PipelineBoard() {
     try {
       const res = await fetch("/api/pipeline");
       if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
+      const data: PipelineProject[] = await res.json();
       setProjects(data);
-      if (data.length > 0 && !selectedId) {
-        setSelectedId(data[0].id);
-      }
+      // Select first project on initial load only (functional update avoids dependency on selectedId)
+      setSelectedId((current) => current ?? data[0]?.id ?? null);
     } catch {
       toast({
         title: "Error",
@@ -454,12 +456,11 @@ export function PipelineBoard() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedId, toast]);
+  }, [toast]);
 
   React.useEffect(() => {
     fetchProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchProjects]);
 
   // Keyboard navigation — all four arrow keys navigate projects,
   // EXCEPT when the note-compose textarea is focused (so cursor moves freely there).
@@ -478,31 +479,34 @@ export function PipelineBoard() {
       // Blur so the active field doesn't keep capturing subsequent events
       active?.blur();
 
-      const filtered = filteredProjects;
-      const idx = filtered.findIndex((p) => p.id === selectedId);
+      const idx = filteredProjects.findIndex((p) => p.id === selectedId);
       if ((e.key === "ArrowUp" || e.key === "ArrowLeft") && idx > 0) {
-        setSelectedId(filtered[idx - 1].id);
+        setSelectedId(filteredProjects[idx - 1].id);
       } else if (
         (e.key === "ArrowDown" || e.key === "ArrowRight") &&
-        idx < filtered.length - 1
+        idx < filteredProjects.length - 1
       ) {
-        setSelectedId(filtered[idx + 1].id);
+        setSelectedId(filteredProjects[idx + 1].id);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  });
+  }, [dialogOpen, filteredProjects, selectedId]);
 
   const filteredProjects = React.useMemo(() => {
+    let result = projects;
+    if (groupFilter !== "All") {
+      result = result.filter((p) => p.projectGroup === groupFilter);
+    }
     const q = search.toLowerCase();
-    if (!q) return projects;
-    return projects.filter(
+    if (!q) return result;
+    return result.filter(
       (p) =>
         p.address.toLowerCase().includes(q) ||
         p.city.toLowerCase().includes(q) ||
         (p.state ?? "").toLowerCase().includes(q)
     );
-  }, [projects, search]);
+  }, [projects, search, groupFilter]);
 
   const selectedProject = projects.find((p) => p.id === selectedId) ?? null;
   const selectedIdx = filteredProjects.findIndex((p) => p.id === selectedId);
@@ -584,6 +588,24 @@ export function PipelineBoard() {
             <Plus className="h-4 w-4" />
             <span className="sr-only">Add project</span>
           </Button>
+        </div>
+
+        {/* Group filter */}
+        <div className="flex gap-1 border-b border-border px-3 py-2 overflow-x-auto">
+          {(["All", ...PROJECT_GROUPS] as const).map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGroupFilter(g)}
+              className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                groupFilter === g
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              }`}
+            >
+              {g}
+            </button>
+          ))}
         </div>
 
         {/* Search */}
@@ -810,19 +832,23 @@ function ProjectDetail({
 
   const stage = getStage(form);
   const stageIdx = PROGRESS_STAGES.indexOf(stage);
+  const parsedNotes = React.useMemo(
+    () => parseNotes(form.developmentNotes ?? ""),
+    [form.developmentNotes]
+  );
 
   return (
     <div className="flex flex-col overflow-hidden h-full">
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 gap-4">
         {/* Project ID · Full Address · Type — single banner row */}
-        <div className="flex flex-1 min-w-0 items-center gap-1.5 text-sm">
+        <div className="flex flex-1 min-w-0 items-center gap-1.5">
           <input
             type="text"
             value={form.projectNumber ?? ""}
             onChange={(e) => setField("projectNumber", e.target.value || null)}
             placeholder="#ID"
-            className="w-20 shrink-0 font-mono text-xs font-semibold text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+            className="w-24 shrink-0 font-mono text-sm font-semibold text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
           />
           <span className="text-muted-foreground/40 shrink-0">·</span>
           <input
@@ -830,21 +856,21 @@ function ProjectDetail({
             value={form.address}
             onChange={(e) => setField("address", e.target.value)}
             placeholder="Address"
-            className="font-bold bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40 min-w-0 flex-1"
+            className="text-base font-bold bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40 min-w-0 flex-1"
           />
           <input
             type="text"
             value={form.city}
             onChange={(e) => setField("city", e.target.value)}
             placeholder="City"
-            className="w-36 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+            className="w-40 shrink-0 text-base text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
           />
           <input
             type="text"
             value={form.state ?? ""}
             onChange={(e) => setField("state", e.target.value || null)}
             placeholder="ST"
-            className="w-8 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+            className="w-9 shrink-0 text-base text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
           />
           <span className="text-muted-foreground/40 shrink-0">·</span>
           <input
@@ -852,8 +878,18 @@ function ProjectDetail({
             value={form.dealType ?? ""}
             onChange={(e) => setField("dealType", e.target.value || null)}
             placeholder="Type"
-            className="w-28 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+            className="w-28 shrink-0 text-sm text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
           />
+          <span className="text-muted-foreground/40 shrink-0">·</span>
+          <select
+            value={form.projectGroup}
+            onChange={(e) => setField("projectGroup", e.target.value)}
+            className="shrink-0 text-sm text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors cursor-pointer"
+          >
+            {PROJECT_GROUPS.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
         </div>
 
         {/* Save status + actions */}
@@ -1069,9 +1105,9 @@ function ProjectDetail({
           )}
 
           {/* Notes feed */}
-          {form.developmentNotes ? (
+          {parsedNotes.length > 0 ? (
             <div className="rounded-md border border-border bg-muted/10 divide-y divide-border max-h-[180px] overflow-y-auto">
-              {parseNotes(form.developmentNotes).map((note, i) => (
+              {parsedNotes.map((note, i) => (
                 <div key={i} className="group flex items-center gap-2 px-3 py-1.5 min-w-0">
                   <span className="shrink-0 text-xs font-semibold text-foreground">{note.initials}</span>
                   {note.date && (

@@ -357,6 +357,7 @@ model PipelineProject {
   city          String
   state         String?
   dealType      String?   // "Conversion" | "GU"
+  projectGroup  String    @default("F7B")
 
   // Early stage
   siteAcceptance String?
