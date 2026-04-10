@@ -411,6 +411,7 @@ export function PipelineBoard() {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
+  const [meetingMode, setMeetingMode] = React.useState(false);
 
   const handleImportFromSheet = async () => {
     setImporting(true);
@@ -574,15 +575,25 @@ export function PipelineBoard() {
               {filteredProjects.length}
             </span>
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setDialogOpen(true)}
-            className="h-7 w-7 p-0"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="sr-only">Add project</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant={meetingMode ? "default" : "outline"}
+              onClick={() => setMeetingMode((m) => !m)}
+              className={`h-7 px-2 text-xs ${meetingMode ? "bg-amber-500 hover:bg-amber-600 border-amber-500 text-white" : ""}`}
+            >
+              {meetingMode ? "Exit Meeting Mode" : "Meeting Mode"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDialogOpen(true)}
+              className="h-7 w-7 p-0"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="sr-only">Add project</span>
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
@@ -663,6 +674,7 @@ export function PipelineBoard() {
             }
             onDelete={() => handleDelete(selectedProject.id)}
             onUpdated={handleProjectUpdated}
+            meetingMode={meetingMode}
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -700,6 +712,7 @@ function ProjectDetail({
   onNext,
   onDelete,
   onUpdated,
+  meetingMode,
 }: {
   project: PipelineProject;
   idx: number;
@@ -708,6 +721,7 @@ function ProjectDetail({
   onNext: () => void;
   onDelete: () => void;
   onUpdated: (project: PipelineProject) => void;
+  meetingMode: boolean;
 }) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1082,151 +1096,153 @@ function ProjectDetail({
           )}
         </div>
 
-        {/* Two-column info grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Left: process notes */}
-          <div className="space-y-3">
+        {!meetingMode && (
+          <>
+            {/* Two-column info grid */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Left: process notes */}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                    Planning Approval Process
+                  </p>
+                  <InlineTextarea
+                    value={form.planningApprovalProcess}
+                    onChange={(v) => setField("planningApprovalProcess", v)}
+                    placeholder="Describe planning process…"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                    Building Approval Process
+                  </p>
+                  <InlineTextarea
+                    value={form.buildingApprovalProcess}
+                    onChange={(v) => setField("buildingApprovalProcess", v)}
+                    placeholder="Describe building process…"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              {/* Right: key dates */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  Key Dates
+                </p>
+                <div className="space-y-1">
+                  <KeyDateField
+                    label="Site Acceptance"
+                    value={form.siteAcceptance}
+                    onChange={(v) => setField("siteAcceptance", v)}
+                  />
+                  <KeyDateField
+                    label="LOI Executed"
+                    value={form.loiExecuted}
+                    onChange={(v) => setField("loiExecuted", v)}
+                  />
+                  <KeyDateField
+                    label="Lease Executed"
+                    value={form.leaseExecuted}
+                    onChange={(v) => setField("leaseExecuted", v)}
+                  />
+                  <KeyDateField
+                    label="Construction Start"
+                    value={form.constructionStart}
+                    onChange={(v) => setField("constructionStart", v)}
+                  />
+                  <KeyDateField
+                    label="Open Date"
+                    value={form.openDate}
+                    onChange={(v) => setField("openDate", v)}
+                  />
+                  <KeyDateField
+                    label="Rent Commencement"
+                    value={form.rentCommencementDate}
+                    onChange={(v) => setField("rentCommencementDate", v)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Teams */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                Planning Approval Process
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Teams
               </p>
-              <InlineTextarea
-                value={form.planningApprovalProcess}
-                onChange={(v) => setField("planningApprovalProcess", v)}
-                placeholder="Describe planning process…"
-                rows={3}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <TeamField
+                  label="Civil / Permitting"
+                  value={form.civilPermittingTeam}
+                  onChange={(v) => setField("civilPermittingTeam", v)}
+                />
+                <TeamField
+                  label="Architect"
+                  value={form.architectTeam}
+                  onChange={(v) => setField("architectTeam", v)}
+                />
+                <TeamField
+                  label="General Contractor"
+                  value={form.generalContractor}
+                  onChange={(v) => setField("generalContractor", v)}
+                />
+                <TeamField
+                  label="Signage Vendor"
+                  value={form.signageVendor}
+                  onChange={(v) => setField("signageVendor", v)}
+                />
+              </div>
             </div>
+
+            {/* Stage checklists */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                Building Approval Process
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Stage Checklist
               </p>
-              <InlineTextarea
-                value={form.buildingApprovalProcess}
-                onChange={(v) => setField("buildingApprovalProcess", v)}
-                placeholder="Describe building process…"
-                rows={3}
-              />
+              <div className="space-y-2">
+                {CHECKLIST_SECTIONS.map((section) => (
+                  <CollapsibleSection key={section.label} title={section.label}>
+                    {section.fields.map((field) => {
+                      const val = form[field.key] as string | null;
+                      const checked = isChecked(val);
+                      const hasTextValue =
+                        val &&
+                        val.toUpperCase() !== "TRUE" &&
+                        val.toUpperCase() !== "FALSE";
+                      return (
+                        <div key={field.key} className="flex items-center gap-2 py-0.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleCheck(field.key)}
+                            className="shrink-0 text-base leading-none hover:scale-110 transition-transform"
+                            title={checked ? "Mark incomplete" : "Mark complete"}
+                          >
+                            {checked ? "✅" : "⬜"}
+                          </button>
+                          <span
+                            className={`text-sm shrink-0 ${
+                              checked ? "text-foreground" : "text-muted-foreground"
+                            }`}
+                          >
+                            {field.label}
+                          </span>
+                          <input
+                            type="text"
+                            value={hasTextValue ? val! : ""}
+                            onChange={(e) => setField(field.key, e.target.value || (checked ? "TRUE" : null))}
+                            placeholder="date or note"
+                            className="flex-1 min-w-0 text-xs bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/30 text-right"
+                          />
+                        </div>
+                      );
+                    })}
+                  </CollapsibleSection>
+                ))}
+              </div>
             </div>
-          </div>
-
-          {/* Right: key dates */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-              Key Dates
-            </p>
-            <div className="space-y-1">
-              <KeyDateField
-                label="Site Acceptance"
-                value={form.siteAcceptance}
-                onChange={(v) => setField("siteAcceptance", v)}
-              />
-              <KeyDateField
-                label="LOI Executed"
-                value={form.loiExecuted}
-                onChange={(v) => setField("loiExecuted", v)}
-              />
-              <KeyDateField
-                label="Lease Executed"
-                value={form.leaseExecuted}
-                onChange={(v) => setField("leaseExecuted", v)}
-              />
-              <KeyDateField
-                label="Construction Start"
-                value={form.constructionStart}
-                onChange={(v) => setField("constructionStart", v)}
-              />
-              <KeyDateField
-                label="Open Date"
-                value={form.openDate}
-                onChange={(v) => setField("openDate", v)}
-              />
-              <KeyDateField
-                label="Rent Commencement"
-                value={form.rentCommencementDate}
-                onChange={(v) => setField("rentCommencementDate", v)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Teams */}
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-            Teams
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <TeamField
-              label="Civil / Permitting"
-              value={form.civilPermittingTeam}
-              onChange={(v) => setField("civilPermittingTeam", v)}
-            />
-            <TeamField
-              label="Architect"
-              value={form.architectTeam}
-              onChange={(v) => setField("architectTeam", v)}
-            />
-            <TeamField
-              label="General Contractor"
-              value={form.generalContractor}
-              onChange={(v) => setField("generalContractor", v)}
-            />
-            <TeamField
-              label="Signage Vendor"
-              value={form.signageVendor}
-              onChange={(v) => setField("signageVendor", v)}
-            />
-          </div>
-        </div>
-
-        {/* Stage checklists */}
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-            Stage Checklist
-          </p>
-          <div className="space-y-2">
-            {CHECKLIST_SECTIONS.map((section) => (
-              <CollapsibleSection key={section.label} title={section.label}>
-                {section.fields.map((field) => {
-                  const val = form[field.key] as string | null;
-                  const checked = isChecked(val);
-                  const hasTextValue =
-                    val &&
-                    val.toUpperCase() !== "TRUE" &&
-                    val.toUpperCase() !== "FALSE";
-                  return (
-                    <div key={field.key} className="flex items-center gap-2 py-0.5">
-                      {/* Toggle checkbox */}
-                      <button
-                        type="button"
-                        onClick={() => toggleCheck(field.key)}
-                        className="shrink-0 text-base leading-none hover:scale-110 transition-transform"
-                        title={checked ? "Mark incomplete" : "Mark complete"}
-                      >
-                        {checked ? "✅" : "⬜"}
-                      </button>
-                      <span
-                        className={`text-sm shrink-0 ${
-                          checked ? "text-foreground" : "text-muted-foreground"
-                        }`}
-                      >
-                        {field.label}
-                      </span>
-                      {/* Inline value input */}
-                      <input
-                        type="text"
-                        value={hasTextValue ? val! : ""}
-                        onChange={(e) => setField(field.key, e.target.value || (checked ? "TRUE" : null))}
-                        placeholder="date or note"
-                        className="flex-1 min-w-0 text-xs bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/30 text-right"
-                      />
-                    </div>
-                  );
-                })}
-              </CollapsibleSection>
-            ))}
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
