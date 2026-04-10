@@ -157,6 +157,20 @@ const PROGRESS_STAGES: StageName[] = [
   "Open",
 ];
 
+// Field that marks each stage as completed
+const STAGE_COMPLETION_FIELD: Partial<Record<StageName, keyof PipelineProject>> = {
+  "Site Accepted": "siteAcceptance",
+  "Test Fit":      "testFitApproved",
+  "LOI":           "loiExecuted",
+  "Lease Signed":  "leaseExecuted",
+  "CD Phase":      "cdKickoffCall",
+  "Design":        "designDocsApproved",
+  "Bidding":       "outToBid",
+  "Permitted":     "permitsIssued",
+  "Construction":  "constructionStart",
+  "Open":          "openDate",
+};
+
 // ---------------------------------------------------------------------------
 // Checklist sections
 // ---------------------------------------------------------------------------
@@ -956,9 +970,12 @@ function ProjectDetail({
       <div className="shrink-0 border-b border-border bg-muted/20 px-6 py-3 overflow-x-auto">
         <div className="flex items-center gap-0 min-w-max">
           {PROGRESS_STAGES.map((s, i) => {
-            const isPast = i < stageIdx;
             const isCurrent = i === stageIdx;
             const isLast = i === PROGRESS_STAGES.length - 1;
+            // A stage is "done" if its own completion field is filled
+            // Prospect is always done (any project in the pipeline is at least a prospect)
+            const field = STAGE_COMPLETION_FIELD[s];
+            const isDone = s === "Prospect" || (field ? !!form[field] : false);
             return (
               <React.Fragment key={s}>
                 <div className="flex flex-col items-center gap-1">
@@ -966,7 +983,7 @@ function ProjectDetail({
                     className={`h-2 w-2 rounded-full border ${
                       isCurrent
                         ? `${STAGE_DOT_COLORS[s]} border-transparent scale-125`
-                        : isPast
+                        : isDone
                         ? "bg-green-400 border-transparent"
                         : "bg-transparent border-border"
                     }`}
@@ -975,7 +992,7 @@ function ProjectDetail({
                     className={`text-[10px] whitespace-nowrap font-medium ${
                       isCurrent
                         ? "text-foreground"
-                        : isPast
+                        : isDone
                         ? "text-green-600"
                         : "text-muted-foreground"
                     }`}
@@ -986,7 +1003,7 @@ function ProjectDetail({
                 {!isLast && (
                   <div
                     className={`h-px w-6 shrink-0 -mt-3 ${
-                      i < stageIdx ? "bg-green-400" : "bg-border"
+                      isDone && !isCurrent ? "bg-green-400" : "bg-border"
                     }`}
                   />
                 )}
