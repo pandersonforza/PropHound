@@ -173,12 +173,13 @@ const CHECKLIST_SECTIONS: ChecklistSection[] = [
       { key: "geotech", label: "Geotech" },
       { key: "phase1Testing", label: "Phase 1 Testing" },
       { key: "asbestosTesting", label: "Asbestos Testing" },
+      { key: "sir", label: "SIR" },                          // moved from Leasing
     ],
   },
   {
     label: "Signage",
     fields: [
-      { key: "signageVendor", label: "Signage Vendor" },
+      // signageVendor moved to Teams section
       { key: "signResourcePm", label: "Sign Resource PM" },
       { key: "sentTo7B", label: "Sent to 7B" },
       { key: "signageApprovedBy7B", label: "Signage Approved by 7B" },
@@ -193,15 +194,14 @@ const CHECKLIST_SECTIONS: ChecklistSection[] = [
     ],
   },
   {
-    label: "Legal",
+    label: "Leasing",                                         // renamed from Legal
     fields: [
       { key: "loiExecuted", label: "LOI Executed" },
       { key: "titleReceived", label: "Title Received" },
       { key: "titleReviewed", label: "Title Reviewed" },
-      { key: "sir", label: "SIR" },
       { key: "initialBudget", label: "Initial Budget" },
       { key: "leaseExecuted", label: "Lease Executed" },
-      { key: "rentCommencementDate", label: "Rent Commencement Date" },
+      // rentCommencementDate removed from checklist
     ],
   },
   {
@@ -215,6 +215,7 @@ const CHECKLIST_SECTIONS: ChecklistSection[] = [
   {
     label: "Permitting",
     fields: [
+      { key: "healthSubmitted", label: "Health Submitted" },  // moved from Bidding
       { key: "planningSubmittal", label: "Planning Submittal" },
       { key: "planningApproved", label: "Planning Approved" },
       { key: "rowPermitsApproved", label: "ROW Permits Approved" },
@@ -233,7 +234,7 @@ const CHECKLIST_SECTIONS: ChecklistSection[] = [
   {
     label: "Bidding",
     fields: [
-      { key: "healthSubmitted", label: "Health Submitted" },
+      // healthSubmitted moved to Permitting
       { key: "outToBid", label: "Out to Bid" },
       { key: "prebidMeeting", label: "Pre-Bid Meeting" },
       { key: "bidsDue", label: "Bids Due" },
@@ -1156,7 +1157,7 @@ function ProjectDetail({
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
             Teams
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <TeamField
               label="Civil / Permitting"
               value={form.civilPermittingTeam}
@@ -1171,6 +1172,11 @@ function ProjectDetail({
               label="General Contractor"
               value={form.generalContractor}
               onChange={(v) => setField("generalContractor", v)}
+            />
+            <TeamField
+              label="Signage Vendor"
+              value={form.signageVendor}
+              onChange={(v) => setField("signageVendor", v)}
             />
           </div>
         </div>
