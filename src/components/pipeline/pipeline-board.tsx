@@ -431,9 +431,14 @@ export function PipelineBoard() {
   const [groupFilter, setGroupFilter] = React.useState<string>("All");
 
   const handleImportFromSheet = async () => {
+    const group = groupFilter === "All" ? "F7B" : groupFilter;
     setImporting(true);
     try {
-      const res = await fetch("/api/pipeline/import", { method: "POST" });
+      const res = await fetch("/api/pipeline/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ group }),
+      });
       const data = (await res.json()) as { imported?: number; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Import failed");
       toast({
@@ -637,7 +642,7 @@ export function PipelineBoard() {
           {filteredProjects.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground space-y-3">
               <p>{search ? "No matches found" : "No projects yet"}</p>
-              {!search && (
+              {!search && groupFilter !== "All" && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -645,7 +650,7 @@ export function PipelineBoard() {
                   disabled={importing}
                 >
                   {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
-                  Import from Google Sheet
+                  Import {groupFilter} from Google Sheet
                 </Button>
               )}
             </div>

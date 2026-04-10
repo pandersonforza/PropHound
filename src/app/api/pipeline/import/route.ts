@@ -1,11 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
 export const maxDuration = 30;
 
-const CSV_URL =
-  'https://docs.google.com/spreadsheets/d/14ntOeldcbGSU4_vifWsBLH0mFD1PMTqT3S9Fvpg-96c/export?format=csv';
+const GROUP_SHEET_URLS: Record<string, string> = {
+  F7B:   'https://docs.google.com/spreadsheets/d/14ntOeldcbGSU4_vifWsBLH0mFD1PMTqT3S9Fvpg-96c/export?format=csv',
+  H7B:   'https://docs.google.com/spreadsheets/d/1AawR7WBYURTPIApFzLVicUbH8IM-47vQLUZkKuSOegw/export?format=csv',
+};
 
 // Standard CSV parser: handles quoted fields containing commas/newlines
 function parseCsv(text: string): Record<string, string>[] {
@@ -195,20 +197,31 @@ function mapRow(raw: Record<string, string>): PipelineProjectData | null {
   return mapped as unknown as PipelineProjectData;
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const res = await fetch(CSV_URL);
+  const body = await request.json().catch(() => ({}));
+  const group: string = body.group ?? 'F7B';
+
+  const csvUrl = GROUP_SHEET_URLS[group];
+  if (!csvUrl) {
+    return NextResponse.json({ error: `No sheet configured for group: ${group}` }, { status: 400 });
+  }
+
+  const res = await fetch(csvUrl);
   if (!res.ok) {
     return NextResponse.json({ error: 'Failed to fetch CSV' }, { status: 502 });
   }
 
   const text = await res.text();
   const rawRows = parseCsv(text);
-  const projects = rawRows.map(mapRow).filter((p): p is PipelineProjectData => p !== null);
+  const projects = rawRows
+    .map(mapRow)
+    .filter((p): p is PipelineProjectData => p !== null)
+    .map((p) => ({ ...p, projectGroup: group }));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await (prisma.pipelineProject.createMany as any)({
