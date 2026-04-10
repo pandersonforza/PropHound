@@ -429,6 +429,7 @@ export function PipelineBoard() {
   const [importing, setImporting] = React.useState(false);
   const [meetingMode, setMeetingMode] = React.useState(false);
   const [groupFilter, setGroupFilter] = React.useState<string>("All");
+  const [sortBy, setSortBy] = React.useState<string>("updated");
 
   const handleImportFromSheet = async () => {
     const group = groupFilter === "All" ? "F7B" : groupFilter;
@@ -487,14 +488,36 @@ export function PipelineBoard() {
       result = result.filter((p) => p.projectGroup === groupFilter);
     }
     const q = search.toLowerCase();
-    if (!q) return result;
-    return result.filter(
-      (p) =>
-        p.address.toLowerCase().includes(q) ||
-        p.city.toLowerCase().includes(q) ||
-        (p.state ?? "").toLowerCase().includes(q)
-    );
-  }, [projects, search, groupFilter]);
+    if (q) {
+      result = result.filter(
+        (p) =>
+          p.address.toLowerCase().includes(q) ||
+          p.city.toLowerCase().includes(q) ||
+          (p.state ?? "").toLowerCase().includes(q)
+      );
+    }
+    // Sort
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case "address":
+          return a.address.localeCompare(b.address);
+        case "city":
+          return a.city.localeCompare(b.city);
+        case "state":
+          return (a.state ?? "").localeCompare(b.state ?? "");
+        case "stage": {
+          const stageOrder = PROGRESS_STAGES;
+          return stageOrder.indexOf(getStage(b)) - stageOrder.indexOf(getStage(a));
+        }
+        case "id":
+          return (a.projectNumber ?? "").localeCompare(b.projectNumber ?? "");
+        case "updated":
+        default:
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }
+    });
+    return result;
+  }, [projects, search, groupFilter, sortBy]);
 
   const selectedProject = projects.find((p) => p.id === selectedId) ?? null;
   const selectedIdx = filteredProjects.findIndex((p) => p.id === selectedId);
@@ -624,9 +647,9 @@ export function PipelineBoard() {
           ))}
         </div>
 
-        {/* Search */}
-        <div className="border-b border-border px-3 py-2">
-          <div className="relative">
+        {/* Search + Sort */}
+        <div className="border-b border-border px-3 py-2 flex gap-2">
+          <div className="relative flex-1">
             <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search address or city…"
@@ -635,6 +658,18 @@ export function PipelineBoard() {
               className="h-8 pl-7 text-sm"
             />
           </div>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer shrink-0"
+          >
+            <option value="updated">Recent</option>
+            <option value="address">Address</option>
+            <option value="city">City</option>
+            <option value="state">State</option>
+            <option value="stage">Stage</option>
+            <option value="id">Project ID</option>
+          </select>
         </div>
 
         {/* Project list */}
