@@ -1053,17 +1053,13 @@ function ProjectDetail({
           {form.developmentNotes ? (
             <div className="rounded-md border border-border bg-muted/10 divide-y divide-border">
               {parseNotes(form.developmentNotes).map((note, i) => (
-                <div key={i} className="group flex items-start gap-2.5 px-3 py-2.5">
-                  <InitialsAvatar initials={note.initials} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-1.5 mb-0.5">
-                      <span className="text-xs font-semibold">{note.initials}</span>
-                      {note.date && (
-                        <span className="text-[10px] text-muted-foreground">{note.date}</span>
-                      )}
-                    </div>
-                    <p className="text-sm leading-relaxed">{note.text}</p>
-                  </div>
+                <div key={i} className="group flex items-center gap-2 px-3 py-1.5 min-w-0">
+                  <span className="shrink-0 text-xs font-semibold text-foreground">{note.initials}</span>
+                  {note.date && (
+                    <span className="shrink-0 text-xs text-muted-foreground">{note.date}</span>
+                  )}
+                  <span className="mx-1 shrink-0 text-muted-foreground/40">—</span>
+                  <p className="flex-1 truncate text-sm">{note.text}</p>
                   <button
                     type="button"
                     onClick={() => deleteNote(note.raw)}
