@@ -878,15 +878,7 @@ function ProjectDetail({
             className="w-28 shrink-0 text-sm text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
           />
           <span className="text-muted-foreground/40 shrink-0">·</span>
-          <select
-            value={form.projectGroup}
-            onChange={(e) => setField("projectGroup", e.target.value)}
-            className="shrink-0 text-sm text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors cursor-pointer"
-          >
-            {PROJECT_GROUPS.map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
+          <span className="shrink-0 text-sm text-muted-foreground px-1">{form.projectGroup}</span>
         </div>
 
         {/* Save status + actions */}
