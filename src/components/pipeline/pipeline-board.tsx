@@ -632,9 +632,8 @@ export function PipelineBoard() {
                     isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted/50"
                   }`}
                 >
-                  <div className="mb-1 flex items-start justify-between gap-2">
+                  <div className="mb-1">
                     <span className="text-sm font-semibold leading-tight">{project.address}</span>
-                    <StageBadge stage={stage} />
                   </div>
                   <p className="mb-1 text-xs text-muted-foreground">
                     {project.city}
