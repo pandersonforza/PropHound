@@ -261,6 +261,7 @@ interface ParsedNote {
   initials: string;
   date: string;
   text: string;
+  raw: string; // original line, used for deletion
 }
 
 function parseNotes(raw: string): ParsedNote[] {
@@ -269,8 +270,8 @@ function parseNotes(raw: string): ParsedNote[] {
     .filter((l) => l.trim())
     .map((line) => {
       const m = line.match(/^([A-Z]{1,4})-(\d{1,2})-(\d{1,2})-\s*(.*)$/);
-      if (m) return { initials: m[1], date: `${m[2]}/${m[3]}`, text: m[4] };
-      return { initials: "•", date: "", text: line };
+      if (m) return { initials: m[1], date: `${m[2]}/${m[3]}`, text: m[4], raw: line };
+      return { initials: "•", date: "", text: line, raw: line };
     });
 }
 
@@ -790,6 +791,21 @@ function ProjectDetail({
     setComposingNote(false);
   }, [noteText, user, doSave]);
 
+  const deleteNote = React.useCallback((rawLine: string) => {
+    setFormState((prev) => {
+      const lines = (prev.developmentNotes ?? "")
+        .split("\n")
+        .filter((l) => l !== rawLine);
+      const updated = {
+        ...prev,
+        developmentNotes: lines.length ? lines.join("\n") : null,
+      };
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      doSave(updated);
+      return updated;
+    });
+  }, [doSave]);
+
   const stage = getStage(form);
   const stageIdx = PROGRESS_STAGES.indexOf(stage);
 
@@ -1036,7 +1052,7 @@ function ProjectDetail({
           {form.developmentNotes ? (
             <div className="rounded-md border border-border bg-muted/10 divide-y divide-border">
               {parseNotes(form.developmentNotes).map((note, i) => (
-                <div key={i} className="flex items-start gap-2.5 px-3 py-2.5">
+                <div key={i} className="group flex items-start gap-2.5 px-3 py-2.5">
                   <InitialsAvatar initials={note.initials} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-1.5 mb-0.5">
@@ -1047,6 +1063,14 @@ function ProjectDetail({
                     </div>
                     <p className="text-sm leading-relaxed">{note.text}</p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => deleteNote(note.raw)}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                    title="Remove note"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ))}
             </div>
