@@ -259,16 +259,16 @@ export function InvoiceList({
               <FileText className="h-4 w-4" />
             </Button>
             {getInvoicePdfUrl(row.original.filePath) && (
-              <Button variant="ghost" size="icon" asChild title="Open / download PDF">
-                <a
-                  href={getInvoicePdfUrl(row.original.filePath)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
-                >
-                  <FileDown className="h-4 w-4" />
-                </a>
-              </Button>
+              <a
+                href={getInvoicePdfUrl(row.original.filePath)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                title="Open / download PDF"
+                className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <FileDown className="h-4 w-4" />
+              </a>
             )}
             {canEdit && status === "Pending Review" && (
               <>
