@@ -119,7 +119,9 @@ export function InvoiceList({
   };
 
   // Derive unique filter options from invoice data
-  const uniqueStatuses = ["All", ...Array.from(new Set(invoices.map((i) => i.status))).sort()];
+  const uniqueStatuses = ["All", "Submitted", "Approved", "Paid"].filter(
+    (s) => s === "All" || invoices.some((i) => i.status === s)
+  );
   const uniqueVendors = Array.from(new Set(invoices.map((i) => i.vendorName).filter(Boolean))).sort();
   const uniqueLineItems = Array.from(
     new Map(
