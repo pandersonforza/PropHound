@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           sidebarCollapsed={sidebarCollapsed}
           onExpandSidebar={() => setSidebarCollapsed(false)}
         />
-        <main className="flex-1 overflow-y-auto bg-background p-6">
+        <main className={`flex-1 bg-background ${pathname === "/pipeline" ? "overflow-hidden" : "overflow-y-auto p-6"}`}>
           {children}
         </main>
       </div>
