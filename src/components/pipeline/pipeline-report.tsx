@@ -13,6 +13,11 @@ interface SheetData {
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
+function isBoolLike(val: string): boolean {
+  const v = val.trim().toUpperCase();
+  return v === "TRUE" || v === "FALSE";
+}
+
 // ── Spreadsheet Table ──────────────────────────────────────────────────────────
 
 function SpreadsheetTable({
@@ -130,7 +135,7 @@ function SpreadsheetTable({
                           : "border-border"
                       } ${ci === 0 ? `sticky left-0 font-medium ${baseBg}` : ""}`}
                       style={{ height: "50px", maxHeight: "50px" }}
-                      onClick={() => { if (!isActive) startEdit(ri, ci, rows); }}
+                      onClick={() => { if (!isActive && !isBoolLike(row[ci] ?? "")) startEdit(ri, ci, rows); }}
                     >
                       {isActive ? (
                         <textarea
@@ -142,6 +147,20 @@ function SpreadsheetTable({
                           className="block w-full h-full bg-blue-50 dark:bg-blue-950/30 outline-none text-[11px] px-2 resize-none overflow-y-auto leading-relaxed"
                           rows={1}
                         />
+                      ) : isBoolLike(row[ci] ?? "") ? (
+                        <div className="flex items-center justify-center h-full">
+                          <input
+                            type="checkbox"
+                            checked={(row[ci] ?? "").trim().toUpperCase() === "TRUE"}
+                            onChange={() => {
+                              const next = rows.map((r) => [...r]);
+                              next[ri][ci] = (row[ci] ?? "").trim().toUpperCase() === "TRUE" ? "FALSE" : "TRUE";
+                              onRowsChange(next);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                          />
+                        </div>
                       ) : (
                         <div className="px-2 py-1 h-full cursor-default overflow-y-auto hover:bg-accent/30">
                           <span className={/address/i.test(headers[ci] ?? "") ? "whitespace-nowrap" : "whitespace-pre-wrap break-words"}>
