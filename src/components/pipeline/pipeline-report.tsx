@@ -13,11 +13,6 @@ interface SheetData {
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-function autoResize(el: HTMLTextAreaElement) {
-  el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, 240) + "px";
-}
-
 // ── Spreadsheet Table ──────────────────────────────────────────────────────────
 
 function SpreadsheetTable({
@@ -44,7 +39,6 @@ function SpreadsheetTable({
     if (editing && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.select();
-      autoResize(textareaRef.current);
     }
   }, [editing]);
 
@@ -124,33 +118,34 @@ function SpreadsheetTable({
           {rows.map((row, ri) => {
             const baseBg = ri % 2 === 0 ? "bg-background" : "bg-muted/20";
             return (
-              <tr key={ri} className={baseBg}>
+              <tr key={ri} className={baseBg} style={{ height: "25px" }}>
                 {headers.map((_, ci) => {
                   const isActive = editing?.row === ri && editing?.col === ci;
                   return (
                     <td
                       key={ci}
-                      className={`border p-0 align-top ${
+                      className={`border p-0 align-middle ${
                         isActive
                           ? "border-blue-400 ring-1 ring-inset ring-blue-400 relative z-10"
                           : "border-border"
                       } ${ci === 0 ? `sticky left-0 font-medium ${baseBg}` : ""}`}
+                      style={{ height: "25px", maxHeight: "25px" }}
                       onClick={() => { if (!isActive) startEdit(ri, ci, rows); }}
                     >
                       {isActive ? (
                         <textarea
                           ref={textareaRef}
                           value={draft}
-                          onChange={(e) => { setDraft(e.target.value); autoResize(e.target); }}
+                          onChange={(e) => setDraft(e.target.value)}
                           onKeyDown={(e) => handleKeyDown(e, ri, ci)}
                           onBlur={() => commitEdit(ri, ci, draft)}
-                          className="block w-full min-w-[120px] bg-blue-50 dark:bg-blue-950/30 outline-none text-[11px] px-2 py-0.5 resize-none overflow-hidden leading-relaxed"
-                          style={{ minHeight: "22px" }}
+                          className="block w-full h-full min-w-[120px] bg-blue-50 dark:bg-blue-950/30 outline-none text-[11px] px-2 resize-none overflow-y-auto leading-relaxed"
+                          style={{ lineHeight: "23px" }}
                           rows={1}
                         />
                       ) : (
-                        <div className="px-2 py-0.5 min-h-[22px] min-w-[60px] max-w-[320px] cursor-default whitespace-pre-wrap break-words leading-relaxed hover:bg-accent/30">
-                          {row[ci] ?? ""}
+                        <div className="px-2 h-full min-w-[60px] max-w-[320px] cursor-default overflow-y-auto flex items-center hover:bg-accent/30">
+                          <span className="whitespace-nowrap">{row[ci] ?? ""}</span>
                         </div>
                       )}
                     </td>
