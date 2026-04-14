@@ -143,8 +143,10 @@ function SpreadsheetTable({
                           rows={1}
                         />
                       ) : (
-                        <div className="px-2 h-full cursor-default overflow-y-auto flex items-center hover:bg-accent/30">
-                          <span className="whitespace-pre-wrap">{row[ci] ?? ""}</span>
+                        <div className="px-2 py-1 h-full cursor-default overflow-y-auto hover:bg-accent/30">
+                          <span className="whitespace-pre-wrap break-words">
+                            {(row[ci] ?? "").replace(/\\n/g, "\n")}
+                          </span>
                         </div>
                       )}
                     </td>
