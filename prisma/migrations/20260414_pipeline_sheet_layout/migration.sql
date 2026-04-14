@@ -1,0 +1,2 @@
+ALTER TABLE "PipelineSheet" ADD COLUMN "colWidths"  JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE "PipelineSheet" ADD COLUMN "rowHeights" JSONB NOT NULL DEFAULT '[]';

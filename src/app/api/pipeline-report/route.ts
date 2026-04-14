@@ -80,7 +80,12 @@ export async function GET(req: NextRequest) {
   try {
     const existing = await prisma.pipelineSheet.findUnique({ where: { group } });
     if (existing) {
-      return NextResponse.json({ headers: existing.headers, rows: existing.rows });
+      return NextResponse.json({
+        headers: existing.headers,
+        rows: existing.rows,
+        colWidths: existing.colWidths,
+        rowHeights: existing.rowHeights,
+      });
     }
 
     // First load: seed from Google Sheets
@@ -88,23 +93,29 @@ export async function GET(req: NextRequest) {
     await prisma.pipelineSheet.create({
       data: { group, headers, rows, syncedAt: new Date() },
     });
-    return NextResponse.json({ headers, rows });
+    return NextResponse.json({ headers, rows, colWidths: [], rowHeights: [] });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
 
-// PATCH — save edited headers + rows from a user
+// PATCH — save edited headers + rows, and/or column/row layout from admin
 export async function PATCH(req: NextRequest) {
   const group = req.nextUrl.searchParams.get("group") ?? "F7B";
   if (!SHEET_URLS[group]) return NextResponse.json({ error: "Unknown group" }, { status: 400 });
 
   try {
-    const { headers, rows } = await req.json();
+    const body = await req.json();
+    const updateData: Record<string, unknown> = {};
+    if (body.headers !== undefined) updateData.headers = body.headers;
+    if (body.rows !== undefined) updateData.rows = body.rows;
+    if (body.colWidths !== undefined) updateData.colWidths = body.colWidths;
+    if (body.rowHeights !== undefined) updateData.rowHeights = body.rowHeights;
+
     await prisma.pipelineSheet.upsert({
       where: { group },
-      update: { headers, rows },
-      create: { group, headers, rows },
+      update: updateData,
+      create: { group, headers: body.headers ?? [], rows: body.rows ?? [], ...updateData },
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

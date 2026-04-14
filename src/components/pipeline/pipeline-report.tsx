@@ -21,11 +21,17 @@ function SpreadsheetTable({
   rows,
   onRowsChange,
   canResize,
+  savedColWidths,
+  savedRowHeights,
+  onLayoutChange,
 }: {
   headers: string[];
   rows: string[][];
   onRowsChange: (rows: string[][]) => void;
   canResize: boolean;
+  savedColWidths: number[];
+  savedRowHeights: number[];
+  onLayoutChange: (colWidths: number[], rowHeights: number[]) => void;
 }) {
   const [editing, setEditing] = React.useState<{ row: number; col: number } | null>(null);
   const [draft, setDraft] = React.useState("");
@@ -39,6 +45,7 @@ function SpreadsheetTable({
   const resizingCol = React.useRef<{ ci: number; startX: number; startWidth: number } | null>(null);
   const resizingRow = React.useRef<{ ri: number; startY: number; startHeight: number } | null>(null);
   const [isDragging, setIsDragging] = React.useState(false);
+  const layoutInitialized = React.useRef(false);
 
   // Clear editing when rows are replaced (e.g. after sync)
   const rowsRef = React.useRef(rows);
@@ -54,15 +61,43 @@ function SpreadsheetTable({
     }
   }, [editing]);
 
-  // Reset row heights when row count changes
+  // Initialize column widths: use DB values if present, else measure DOM and
+  // cap "Development Notes" at 150px as a default.
   React.useEffect(() => {
-    setRowHeights((prev) => {
-      if (prev.length === rows.length) return prev;
-      const next = Array(rows.length).fill(50);
-      for (let i = 0; i < Math.min(prev.length, next.length); i++) next[i] = prev[i];
-      return next;
+    if (headers.length === 0 || layoutInitialized.current) return;
+
+    if (savedColWidths.length === headers.length) {
+      setColWidths(savedColWidths);
+      layoutInitialized.current = true;
+      return;
+    }
+
+    // Measure natural widths from DOM then apply the 150px cap on Dev Notes
+    if (!theadRef.current) return;
+    const ths = theadRef.current.querySelectorAll("th");
+    if (ths.length !== headers.length) return;
+
+    const measured = Array.from(ths).map((th, i) => {
+      const w = th.getBoundingClientRect().width;
+      if (/development\s*notes?/i.test(headers[i] ?? "")) return 150;
+      return w || 100;
     });
-  }, [rows.length]);
+    setColWidths(measured);
+    layoutInitialized.current = true;
+  });
+
+  // Sync saved row heights when provided (e.g. after load)
+  const rowHeightsInitialized = React.useRef(false);
+  React.useEffect(() => {
+    if (rowHeightsInitialized.current) return;
+    if (savedRowHeights.length === rows.length) {
+      setRowHeights(savedRowHeights);
+      rowHeightsInitialized.current = true;
+    } else if (rows.length > 0) {
+      setRowHeights(Array(rows.length).fill(50));
+      rowHeightsInitialized.current = true;
+    }
+  }, [savedRowHeights, rows.length]);
 
   // Column resize handlers
   const startColResize = React.useCallback((e: React.MouseEvent, ci: number) => {
@@ -96,11 +131,13 @@ function SpreadsheetTable({
       setIsDragging(false);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      // Persist layout after drag ends
+      setColWidths((cw) => { setRowHeights((rh) => { onLayoutChange(cw, rh); return rh; }); return cw; });
     };
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
-  }, [colWidths]);
+  }, [colWidths, onLayoutChange]);
 
   // Row resize handlers
   const startRowResize = React.useCallback((e: React.MouseEvent, ri: number) => {
@@ -132,11 +169,13 @@ function SpreadsheetTable({
       setIsDragging(false);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      // Persist layout after drag ends
+      setColWidths((cw) => { setRowHeights((rh) => { onLayoutChange(cw, rh); return rh; }); return cw; });
     };
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
-  }, [rowHeights, rows.length]);
+  }, [rowHeights, rows.length, onLayoutChange]);
 
   const commitEdit = React.useCallback(
     (ri: number, ci: number, value: string): string[][] => {
@@ -308,6 +347,8 @@ function GroupTab({ group }: { group: Group }) {
   const canResize = user?.role === "admin";
   const [headers, setHeaders] = React.useState<string[]>([]);
   const [rows, setRows] = React.useState<string[][]>([]);
+  const [savedColWidths, setSavedColWidths] = React.useState<number[]>([]);
+  const [savedRowHeights, setSavedRowHeights] = React.useState<number[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>("idle");
   const [error, setError] = React.useState<string | null>(null);
@@ -322,6 +363,8 @@ function GroupTab({ group }: { group: Group }) {
       if (d.error) throw new Error(d.error);
       setHeaders(d.headers);
       setRows(d.rows);
+      if (Array.isArray(d.colWidths) && d.colWidths.length > 0) setSavedColWidths(d.colWidths);
+      if (Array.isArray(d.rowHeights) && d.rowHeights.length > 0) setSavedRowHeights(d.rowHeights);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -331,8 +374,8 @@ function GroupTab({ group }: { group: Group }) {
 
   React.useEffect(() => { load(); }, [load]);
 
-  const save = React.useCallback(
-    (newRows: string[][]) => {
+  const patch = React.useCallback(
+    async (body: Record<string, unknown>) => {
       setSaveStatus("saving");
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(async () => {
@@ -340,7 +383,7 @@ function GroupTab({ group }: { group: Group }) {
           const res = await fetch(`/api/pipeline-report?group=${group}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ headers, rows: newRows }),
+            body: JSON.stringify(body),
           });
           if (!res.ok) throw new Error("Save failed");
           setSaveStatus("saved");
@@ -350,15 +393,22 @@ function GroupTab({ group }: { group: Group }) {
         }
       }, 800);
     },
-    [group, headers]
+    [group]
   );
 
   const handleRowsChange = React.useCallback(
     (newRows: string[][]) => {
       setRows(newRows);
-      save(newRows);
+      patch({ headers, rows: newRows });
     },
-    [save]
+    [patch, headers]
+  );
+
+  const handleLayoutChange = React.useCallback(
+    (colWidths: number[], rowHeights: number[]) => {
+      patch({ colWidths, rowHeights });
+    },
+    [patch]
   );
 
 
@@ -411,6 +461,9 @@ function GroupTab({ group }: { group: Group }) {
           rows={rows}
           onRowsChange={handleRowsChange}
           canResize={canResize}
+          savedColWidths={savedColWidths}
+          savedRowHeights={savedRowHeights}
+          onLayoutChange={handleLayoutChange}
         />
       </div>
     </div>
