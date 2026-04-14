@@ -79,7 +79,7 @@ function SpreadsheetTable({
 
     const measured = Array.from(ths).map((th, i) => {
       const w = th.getBoundingClientRect().width;
-      if (/development\s*notes?/i.test(headers[i] ?? "")) return 150;
+      if (/development\s*notes?/i.test(headers[i] ?? "")) return 200;
       return w || 100;
     });
     setColWidths(measured);
