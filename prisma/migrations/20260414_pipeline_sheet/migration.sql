@@ -1,0 +1,8 @@
+CREATE TABLE "PipelineSheet" (
+  "group"     TEXT NOT NULL,
+  "headers"   JSONB NOT NULL DEFAULT '[]',
+  "rows"      JSONB NOT NULL DEFAULT '[]',
+  "syncedAt"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "PipelineSheet_pkey" PRIMARY KEY ("group")
+);

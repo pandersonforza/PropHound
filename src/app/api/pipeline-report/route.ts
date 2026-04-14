@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 const SHEET_URLS: Record<string, string> = {
   F7B: "https://docs.google.com/spreadsheets/d/14ntOeldcbGSU4_vifWsBLH0mFD1PMTqT3S9Fvpg-96c/export?format=csv",
@@ -45,33 +46,84 @@ function parseCSV(text: string): string[][] {
   return rows;
 }
 
-export async function GET(req: NextRequest) {
-  const group = req.nextUrl.searchParams.get("group") ?? "H7B";
+async function fetchFromSheet(group: string): Promise<{ headers: string[]; rows: string[][] }> {
   const url = SHEET_URLS[group];
-  if (!url) return NextResponse.json({ error: "Unknown group" }, { status: 400 });
+  if (!url) throw new Error(`Unknown group: ${group}`);
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`);
+
+  const text = await res.text();
+  const allRows = parseCSV(text);
+  if (allRows.length === 0) return { headers: [], rows: [] };
+
+  const headers = allRows[0];
+  let rows = allRows.slice(1);
+
+  if (group === "Forza" || group === "Harman") {
+    const idCol = headers.findIndex((h) => /project\s*id/i.test(h.trim()));
+    rows = rows.filter((row) => {
+      const id = (row[idCol] ?? "").trim();
+      if (!id || id.startsWith("(")) return false;
+      return group === "Forza" ? id.startsWith("FZD") : !id.startsWith("FZD");
+    });
+  }
+
+  return { headers, rows };
+}
+
+// GET — return saved data from DB; if none yet, pull from Sheets and seed
+export async function GET(req: NextRequest) {
+  const group = req.nextUrl.searchParams.get("group") ?? "F7B";
+  if (!SHEET_URLS[group]) return NextResponse.json({ error: "Unknown group" }, { status: 400 });
 
   try {
-    const res = await fetch(url, { next: { revalidate: 300 } });
-    if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`);
-
-    const text = await res.text();
-    const allRows = parseCSV(text);
-    if (allRows.length === 0) return NextResponse.json({ headers: [], rows: [] });
-
-    const headers = allRows[0];
-    let rows = allRows.slice(1);
-
-    // Filter the shared Forza/Harman sheet by project ID prefix
-    if (group === "Forza" || group === "Harman") {
-      const idCol = headers.findIndex((h) => /project\s*id/i.test(h.trim()));
-      rows = rows.filter((row) => {
-        const id = (row[idCol] ?? "").trim();
-        if (!id || id.startsWith("(")) return false; // skip blank/section headers
-        if (group === "Forza") return id.startsWith("FZD");
-        return !id.startsWith("FZD"); // Harman = everything else
-      });
+    const existing = await prisma.pipelineSheet.findUnique({ where: { group } });
+    if (existing) {
+      return NextResponse.json({ headers: existing.headers, rows: existing.rows });
     }
 
+    // First load: seed from Google Sheets
+    const { headers, rows } = await fetchFromSheet(group);
+    await prisma.pipelineSheet.create({
+      data: { group, headers, rows, syncedAt: new Date() },
+    });
+    return NextResponse.json({ headers, rows });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
+// PATCH — save edited headers + rows from a user
+export async function PATCH(req: NextRequest) {
+  const group = req.nextUrl.searchParams.get("group") ?? "F7B";
+  if (!SHEET_URLS[group]) return NextResponse.json({ error: "Unknown group" }, { status: 400 });
+
+  try {
+    const { headers, rows } = await req.json();
+    await prisma.pipelineSheet.upsert({
+      where: { group },
+      update: { headers, rows },
+      create: { group, headers, rows },
+    });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
+// POST — re-sync from Google Sheets, overwriting saved data
+export async function POST(req: NextRequest) {
+  const group = req.nextUrl.searchParams.get("group") ?? "F7B";
+  if (!SHEET_URLS[group]) return NextResponse.json({ error: "Unknown group" }, { status: 400 });
+
+  try {
+    const { headers, rows } = await fetchFromSheet(group);
+    await prisma.pipelineSheet.upsert({
+      where: { group },
+      update: { headers, rows, syncedAt: new Date() },
+      create: { group, headers, rows, syncedAt: new Date() },
+    });
     return NextResponse.json({ headers, rows });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
