@@ -98,14 +98,14 @@ function SpreadsheetTable({
   }
 
   return (
-    <div className="overflow-y-auto h-full">
-      <table className="border-collapse text-[11px] w-full table-fixed">
+    <div className="overflow-auto h-full">
+      <table className="border-collapse text-[11px]">
         <thead>
           <tr>
             {headers.map((h, i) => (
               <th
                 key={i}
-                className={`sticky top-0 border border-border bg-muted px-2 py-1.5 text-left font-semibold text-muted-foreground truncate select-none ${
+                className={`sticky top-0 border border-border bg-muted px-2 py-1.5 text-left font-semibold text-muted-foreground whitespace-nowrap select-none ${
                   i === 0 ? "left-0 z-20" : "z-10"
                 }`}
               >
@@ -118,7 +118,7 @@ function SpreadsheetTable({
           {rows.map((row, ri) => {
             const baseBg = ri % 2 === 0 ? "bg-background" : "bg-muted/20";
             return (
-              <tr key={ri} className={baseBg} style={{ height: "25px" }}>
+              <tr key={ri} className={baseBg} style={{ height: "50px" }}>
                 {headers.map((_, ci) => {
                   const isActive = editing?.row === ri && editing?.col === ci;
                   return (
@@ -129,7 +129,7 @@ function SpreadsheetTable({
                           ? "border-blue-400 ring-1 ring-inset ring-blue-400 relative z-10"
                           : "border-border"
                       } ${ci === 0 ? `sticky left-0 font-medium ${baseBg}` : ""}`}
-                      style={{ height: "25px", maxHeight: "25px" }}
+                      style={{ height: "50px", maxHeight: "50px" }}
                       onClick={() => { if (!isActive) startEdit(ri, ci, rows); }}
                     >
                       {isActive ? (
@@ -140,12 +140,11 @@ function SpreadsheetTable({
                           onKeyDown={(e) => handleKeyDown(e, ri, ci)}
                           onBlur={() => commitEdit(ri, ci, draft)}
                           className="block w-full h-full bg-blue-50 dark:bg-blue-950/30 outline-none text-[11px] px-2 resize-none overflow-y-auto leading-relaxed"
-                          style={{ lineHeight: "23px" }}
                           rows={1}
                         />
                       ) : (
-                        <div className="px-2 h-full w-full cursor-default overflow-y-auto flex items-center hover:bg-accent/30">
-                          <span className="truncate w-full">{row[ci] ?? ""}</span>
+                        <div className="px-2 h-full cursor-default overflow-y-auto flex items-center hover:bg-accent/30">
+                          <span className="whitespace-nowrap">{row[ci] ?? ""}</span>
                         </div>
                       )}
                     </td>
