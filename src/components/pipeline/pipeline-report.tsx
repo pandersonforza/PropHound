@@ -313,8 +313,8 @@ function SpreadsheetTable({
                           />
                         </div>
                       ) : (
-                        <div className="px-2 py-1 h-full cursor-default overflow-y-auto hover:bg-accent/30">
-                          <span className={/address/i.test(headers[ci] ?? "") ? "whitespace-nowrap" : "whitespace-pre-wrap break-words"}>
+                        <div className="px-2 py-1 h-full cursor-default overflow-y-auto hover:bg-accent/30 flex items-center">
+                          <span className={`min-w-0 w-full ${/address/i.test(headers[ci] ?? "") ? "whitespace-nowrap" : "whitespace-pre-wrap break-words"}`}>
                             {(row[ci] ?? "").replace(/\\n/g, "\n")}
                           </span>
                         </div>
