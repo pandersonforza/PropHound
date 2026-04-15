@@ -345,13 +345,3 @@ model BidLineItem {
 
   @@index([bidId])
 }
-
-model PipelineSheet {
-  group      String   @id          // "F7B" | "H7B" | "Forza" | "Harman"
-  headers    Json                  // string[]
-  rows       Json                  // string[][]
-  colWidths  Json     @default("[]") // number[]
-  rowHeights Json     @default("[]") // number[]
-  syncedAt   DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
