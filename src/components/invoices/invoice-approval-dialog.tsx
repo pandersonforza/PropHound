@@ -221,11 +221,15 @@ export function InvoiceApprovalDialog({
   })();
   const isPayApp = payItems.length > 0;
 
-  const pdfUrl = invoice.filePath
-    ? invoice.filePath.startsWith("http")
-      ? `/api/invoices/file?url=${encodeURIComponent(invoice.filePath)}`
-      : invoice.filePath
-    : null;
+  const isDevFee = !!invoice.aiNotes?.includes("__devFeePdfMeta__");
+
+  const pdfUrl = isDevFee
+    ? `/api/invoices/dev-fee/${invoice.id}/pdf`
+    : invoice.filePath
+      ? invoice.filePath.startsWith("http")
+        ? `/api/invoices/file?url=${encodeURIComponent(invoice.filePath)}`
+        : invoice.filePath
+      : null;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
