@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/components/ui/toast";
 import { DatePicker } from "@/components/ui/date-picker";
-import { CalendarDays, MessageSquare } from "lucide-react";
+import { CalendarDays, MessageSquare, FileDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface Assignee {
@@ -186,6 +186,15 @@ export function ProjectCloseout({ projectId }: ProjectCloseoutProps) {
         <span className="text-sm text-muted-foreground shrink-0">
           {completed} / {total} complete ({pct}%)
         </span>
+        <a
+          href={`/api/closeout/pdf?projectId=${projectId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input bg-background text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          <FileDown className="h-4 w-4" />
+          Print PDF
+        </a>
       </div>
 
       {/* Categories */}
