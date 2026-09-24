@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
       where.projectId = projectId;
     }
     if (status) {
-      where.status = status;
+      // Support comma-separated values: ?status=Submitted,Rejected
+      const statuses = status.split(',').map((s) => s.trim()).filter(Boolean);
+      where.status = statuses.length === 1 ? statuses[0] : { in: statuses };
     }
     if (approverId) {
       where.approverId = approverId;

@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { InvoiceApprovalDialog, type InvoiceForApproval } from "@/components/invoices/invoice-approval-dialog";
 
@@ -23,7 +23,9 @@ interface Invoice {
   invoiceNumber: string | null;
   amount: number;
   description: string | null;
+  status: string;
   submittedDate: string | null;
+  rejectedDate: string | null;
   filePath: string | null;
   aiNotes: string | null;
   rejectionReason: string | null;
@@ -44,7 +46,7 @@ export function PendingApprovals() {
   const fetchInvoices = useCallback(async () => {
     if (!user) return;
     try {
-      const res = await fetch(`/api/invoices?status=Submitted`);
+      const res = await fetch(`/api/invoices?status=Submitted,Rejected`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setInvoices(data);
@@ -65,13 +67,22 @@ export function PendingApprovals() {
 
   if (loading) return null;
 
-  const oldest5 = [...invoices]
-    .sort((a, b) => {
+  const pending  = invoices.filter((i) => i.status === "Submitted");
+  const rejected = invoices.filter((i) => i.status === "Rejected");
+
+  // Show oldest submitted first, then rejected (newest first so admins see recent rejects)
+  const oldest5 = [
+    ...pending.sort((a, b) => {
       const aDate = a.submittedDate ? new Date(a.submittedDate).getTime() : 0;
       const bDate = b.submittedDate ? new Date(b.submittedDate).getTime() : 0;
       return aDate - bDate;
-    })
-    .slice(0, 5);
+    }),
+    ...rejected.sort((a, b) => {
+      const aDate = a.rejectedDate ? new Date(a.rejectedDate).getTime() : 0;
+      const bDate = b.rejectedDate ? new Date(b.rejectedDate).getTime() : 0;
+      return bDate - aDate;
+    }),
+  ].slice(0, 5);
 
   return (
     <>
@@ -98,17 +109,39 @@ export function PendingApprovals() {
                     <TableHead>Vendor</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Project</TableHead>
-                    <TableHead>Submitted</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {oldest5.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">{invoice.vendorName}</TableCell>
+                  {oldest5.map((invoice) => {
+                    const isRejected = invoice.status === "Rejected";
+                    const dateStr = isRejected
+                      ? (invoice.rejectedDate ? formatDate(invoice.rejectedDate) : "—")
+                      : (invoice.submittedDate ? formatDate(invoice.submittedDate) : "—");
+                    return (
+                    <TableRow key={invoice.id} className={isRejected ? "bg-destructive/5" : ""}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {isRejected && <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                          {invoice.vendorName}
+                        </div>
+                      </TableCell>
                       <TableCell>{formatCurrency(invoice.amount)}</TableCell>
                       <TableCell>{invoice.project?.name ?? "—"}</TableCell>
-                      <TableCell>{invoice.submittedDate ? formatDate(invoice.submittedDate) : "—"}</TableCell>
+                      <TableCell>{dateStr}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="secondary"
+                          className={isRejected
+                            ? "bg-destructive/15 text-destructive border-destructive/20"
+                            : "bg-amber-500/15 text-amber-600 border-amber-500/20"
+                          }
+                        >
+                          {invoice.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           size="sm"
@@ -119,12 +152,13 @@ export function PendingApprovals() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
               {invoices.length > 5 && (
                 <p className="text-xs text-muted-foreground mt-3">
-                  Showing 5 oldest of {invoices.length} pending — go to the Invoices tab to see all.
+                  Showing 5 of {invoices.length} ({pending.length} pending, {rejected.length} rejected) — go to the Invoices tab to see all.
                 </p>
               )}
             </>
