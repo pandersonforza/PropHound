@@ -114,7 +114,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     XLSX.writeFile(wb, `PayApp_Template_${appNumber || "blank"}.xlsx`);
   };
 
-  // Import from Excel — match by line item description
+  // Import from Excel — tries all sheets and multiple parsing strategies
   const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -125,101 +125,121 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         const XLSX = await import("xlsx");
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
 
-        if (rows.length === 0) {
-          toast({ title: "Empty file", description: "No rows found in the Excel file", variant: "destructive" });
-          return;
-        }
+        const descKeywords = ["description", "line item", "lineitem", "item", "work", "trade", "scope", "cost code", "category"];
+        const amtKeywords  = ["this period", "thisperiod", "amount", "billing", "current", "billed", "period", "draw"];
 
-        // Auto-detect which column holds descriptions and which holds the billing amount
-        const allKeys = Object.keys(rows[0]);
-        const descKeywords = ["description", "line item", "lineitem", "item", "work", "trade", "scope", "cost code"];
-        const amtKeywords  = ["this period", "thisperiod", "amount", "billing", "current", "billed", "period"];
+        // Attempt to extract matches from a sheet using raw rows (no header assumption).
+        // Strategy A: scan first 20 rows for a header row, then use column indices.
+        // Strategy B: scan every cell for a value matching a budget description, then
+        //             find the best numeric value in that row.
+        // Returns the list of { lineItemId, amount } pairs from whichever strategy wins.
+        const parseSheet = (sheetName: string): { lineItemId: string; amount: number; usedSheet: string }[] => {
+          const ws = wb.Sheets[sheetName];
+          const rawRows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 }) as unknown[][];
+          if (rawRows.length < 2) return [];
 
-        const findKey = (keywords: string[]) =>
-          allKeys.find((k) => keywords.some((kw) => k.toLowerCase().includes(kw)));
+          const toStr  = (v: unknown) => String(v ?? "").trim();
+          const toNum  = (v: unknown) => parseFloat(toStr(v).replace(/[$,\s]/g, "")) || 0;
 
-        const descKey = findKey(descKeywords);
-        const amtKey  = findKey(amtKeywords);
+          // ── Strategy A: header-row detection ──────────────────────────────
+          let stratAResults: { lineItemId: string; amount: number; usedSheet: string }[] = [];
+          for (let hi = 0; hi < Math.min(20, rawRows.length - 1); hi++) {
+            const headerRow = rawRows[hi].map(toStr);
+            const descCol = headerRow.findIndex((h) => descKeywords.some((kw) => h.toLowerCase().includes(kw)));
+            const amtCol  = headerRow.findIndex((h) => amtKeywords.some((kw) => h.toLowerCase().includes(kw)));
+            if (descCol < 0 || amtCol < 0) continue;
 
-        const getDesc = (row: Record<string, unknown>) => {
-          if (descKey) return String(row[descKey] ?? "").trim();
-          // Last-resort: try every hardcoded name
-          return String(
-            row["Line Item"] ?? row["line item"] ?? row["Description"] ??
-            row["description"] ?? row["Item"] ?? row["item"] ?? ""
-          ).trim();
-        };
-
-        const getAmt = (row: Record<string, unknown>) => {
-          const raw = amtKey
-            ? String(row[amtKey] ?? "0")
-            : String(
-                row["This Period"] ?? row["this period"] ?? row["Amount"] ??
-                row["amount"] ?? row["Current"] ?? row["current"] ??
-                row["Billing"] ?? row["billing"] ?? 0
-              );
-          return parseFloat(raw.replace(/[$,\s]/g, "")) || 0;
-        };
-
-        // Pre-scan to gather diagnostics
-        let rowsWithAmount = 0;
-        const excelDescs: string[] = [];
-        for (const row of rows) {
-          const desc = getDesc(row);
-          const amt  = getAmt(row);
-          if (desc) excelDescs.push(desc);
-          if (amt !== 0) rowsWithAmount++;
-        }
-
-        let matched = 0;
-        setItems((prev) => {
-          const updated = [...prev];
-          for (const row of rows) {
-            const descRaw = getDesc(row);
-            const amount  = getAmt(row);
-            if (!descRaw || amount <= 0) continue;
-
-            const descNorm = normalize(descRaw);
-
-            // 1. Exact normalized match
-            let idx = updated.findIndex((item) => normalize(item.description) === descNorm);
-
-            // 2. Fallback: one description contains the other
-            if (idx < 0) {
-              idx = updated.findIndex(
-                (item) =>
-                  normalize(item.description).includes(descNorm) ||
-                  descNorm.includes(normalize(item.description))
-              );
+            const results: { lineItemId: string; amount: number; usedSheet: string }[] = [];
+            for (let ri = hi + 1; ri < rawRows.length; ri++) {
+              const row = rawRows[ri];
+              const descRaw = toStr(row[descCol]);
+              const amount  = toNum(row[amtCol]);
+              if (!descRaw || amount <= 0) continue;
+              const dn = normalize(descRaw);
+              const hit = items.find((it) => normalize(it.description) === dn)
+                ?? items.find((it) => normalize(it.description).includes(dn) || dn.includes(normalize(it.description)));
+              if (hit) results.push({ lineItemId: hit.lineItemId, amount, usedSheet: sheetName });
             }
+            if (results.length > stratAResults.length) stratAResults = results;
+          }
 
-            if (idx >= 0) {
-              updated[idx] = { ...updated[idx], currentAmount: amount };
-              matched++;
+          // ── Strategy B: description-scan (no header needed) ───────────────
+          // For every cell whose text matches a budget line item, find the best
+          // numeric value in that row. Prefer the column that is most consistently
+          // used across all matched rows.
+          const rowHits: { lineItemId: string; rowIdx: number; numericCols: { col: number; val: number }[] }[] = [];
+          for (let ri = 0; ri < rawRows.length; ri++) {
+            const row = rawRows[ri];
+            for (let ci = 0; ci < row.length; ci++) {
+              const cellText = toStr(row[ci]);
+              if (cellText.length < 3) continue;
+              const dn = normalize(cellText);
+              const hit = items.find((it) => normalize(it.description) === dn)
+                ?? items.find((it) => {
+                  const n = normalize(it.description);
+                  return n.length > 4 && (n.includes(dn) || dn.includes(n));
+                });
+              if (!hit) continue;
+              const numericCols = row
+                .map((v, col) => ({ col, val: toNum(v) }))
+                .filter(({ col, val }) => col !== ci && val > 0);
+              if (numericCols.length > 0) rowHits.push({ lineItemId: hit.lineItemId, rowIdx: ri, numericCols });
+              break; // only match one description per row
             }
           }
-          return updated;
-        });
 
-        if (matched === 0) {
-          const budgetSample = items.slice(0, 2).map((i) => `"${i.description}"`).join(", ");
-          const excelSample  = excelDescs.slice(0, 2).map((d) => `"${d}"`).join(", ");
-          const headerNote   = `Columns found: ${allKeys.slice(0, 6).map((k) => `"${k}"`).join(", ")}${allKeys.length > 6 ? "…" : ""}.`;
-          const amountNote   = rowsWithAmount === 0
-            ? `No amounts found (amount column: ${amtKey ? `"${amtKey}"` : "not detected"}).`
-            : `${rowsWithAmount} row(s) have amounts > 0.`;
-          toast({
-            title: "No line items matched",
-            description: `${headerNote} ${amountNote} Excel descriptions: ${excelSample || "none"}. Budget descriptions: ${budgetSample || "none"}.`,
-            variant: "destructive",
+          // Pick the column index that appears most often across all row hits
+          const colFreq = new Map<number, number>();
+          for (const { numericCols } of rowHits) {
+            for (const { col } of numericCols) colFreq.set(col, (colFreq.get(col) ?? 0) + 1);
+          }
+          const bestCol = [...colFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? -1;
+
+          const stratBResults: { lineItemId: string; amount: number; usedSheet: string }[] = [];
+          for (const { lineItemId, numericCols } of rowHits) {
+            const preferred = numericCols.find(({ col }) => col === bestCol);
+            const amount = preferred?.val ?? numericCols[numericCols.length - 1]?.val ?? 0;
+            if (amount > 0) stratBResults.push({ lineItemId, amount, usedSheet: sheetName });
+          }
+
+          // Return whichever strategy found more matches
+          return stratAResults.length >= stratBResults.length ? stratAResults : stratBResults;
+        };
+
+        // Try every sheet; keep the best result
+        let best: { lineItemId: string; amount: number; usedSheet: string }[] = [];
+        for (const name of wb.SheetNames) {
+          const result = parseSheet(name);
+          if (result.length > best.length) best = result;
+        }
+
+        if (best.length > 0) {
+          setItems((prev) => {
+            const updated = [...prev];
+            for (const { lineItemId, amount } of best) {
+              const idx = updated.findIndex((it) => it.lineItemId === lineItemId);
+              if (idx >= 0) updated[idx] = { ...updated[idx], currentAmount: amount };
+            }
+            return updated;
           });
-        } else {
+          const sheetNote = wb.SheetNames.length > 1 ? ` from sheet "${best[0].usedSheet}"` : "";
           toast({
             title: "Excel imported",
-            description: `Matched ${matched} line item${matched !== 1 ? "s" : ""} from ${rows.length} rows`,
+            description: `Matched ${best.length} line item${best.length !== 1 ? "s" : ""}${sheetNote}`,
+          });
+        } else {
+          // Show diagnostics: sheet names and first row of each sheet
+          const sheetInfo = wb.SheetNames.map((name) => {
+            const ws = wb.Sheets[name];
+            const first = (XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 }) as unknown[][])[0] ?? [];
+            return `"${name}": [${first.slice(0, 5).map((c) => `"${String(c ?? "")}"`).join(", ")}]`;
+          }).join(" | ");
+          const budgetSample = items.slice(0, 3).map((i) => `"${i.description}"`).join(", ");
+          toast({
+            title: "No line items matched",
+            description: `Sheets — ${sheetInfo}. Budget items: ${budgetSample}.`,
+            variant: "destructive",
           });
         }
       } catch {
@@ -227,7 +247,6 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
       }
     };
     reader.readAsArrayBuffer(file);
-    // Reset the input so the same file can be re-imported
     e.target.value = "";
   };
 
