@@ -58,7 +58,8 @@ interface PdfExtractedItem {
 
 interface ExcelExtractedItem {
   description: string;
-  amount: number;
+  amount: number;          // parsed from Excel; 0 means not detected
+  manualAmount: string;    // user-typed override when amount === 0
   matchedLineItemId: string | null;
   manualLineItemId: string;
 }
@@ -159,27 +160,57 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
           };
 
           // ── Strategy A: scan first 20 rows for a recognizable header row ──
-          // Collects ALL rows with a description + amount (matched AND unmatched).
+          // Collects ALL rows with a non-empty description (matched AND unmatched,
+          // including $0 rows — those show in the panel so the user can fix them).
           let stratA: ExcelExtractedItem[] = [];
           let stratAMatches = 0;
           for (let hi = 0; hi < Math.min(20, rawRows.length - 1); hi++) {
             const headerRow = rawRows[hi].map(toStr);
             const descCol = headerRow.findIndex((h) => descKeywords.some((kw) => h.toLowerCase().includes(kw)));
-            const amtCol  = headerRow.findIndex((h) => amtKeywords.some((kw) => h.toLowerCase().includes(kw)));
-            if (descCol < 0 || amtCol < 0) continue;
+            if (descCol < 0) continue;
+
+            // Collect data rows that have non-empty descriptions
+            const dataRows: { rowIdx: number; descRaw: string; row: unknown[] }[] = [];
+            for (let ri = hi + 1; ri < rawRows.length; ri++) {
+              const descRaw = toStr(rawRows[ri][descCol]);
+              if (descRaw) dataRows.push({ rowIdx: ri, descRaw, row: rawRows[ri] });
+            }
+            if (dataRows.length === 0) continue;
+
+            // Find the best amount column: prefer keyword match, then pick the
+            // column where the most data rows have a positive numeric value.
+            const keywordAmtCol = headerRow.findIndex((h) => amtKeywords.some((kw) => h.toLowerCase().includes(kw)));
+
+            // Score every non-description numeric-ish column by how many data rows
+            // have a value > 0 in that column.
+            const colScores = new Map<number, number>();
+            for (const { row } of dataRows) {
+              for (let ci = 0; ci < headerRow.length; ci++) {
+                if (ci === descCol) continue;
+                if (toNum(row[ci]) > 0) colScores.set(ci, (colScores.get(ci) ?? 0) + 1);
+              }
+            }
+            // Prefer the keyword-matched column if it has a reasonable score;
+            // otherwise use the column with the highest score.
+            const sortedCols = [...colScores.entries()].sort((a, b) => b[1] - a[1]);
+            let amtCol = -1;
+            if (keywordAmtCol >= 0 && (colScores.get(keywordAmtCol) ?? 0) >= dataRows.length * 0.5) {
+              amtCol = keywordAmtCol;
+            } else if (sortedCols.length > 0) {
+              amtCol = sortedCols[0][0];
+            }
+            if (amtCol < 0) continue;
 
             const results: ExcelExtractedItem[] = [];
             let mc = 0;
-            for (let ri = hi + 1; ri < rawRows.length; ri++) {
-              const row = rawRows[ri];
-              const descRaw = toStr(row[descCol]);
-              const amount  = toNum(row[amtCol]);
-              if (!descRaw || amount <= 0) continue;
+            for (const { descRaw, row } of dataRows) {
+              const amount = toNum(row[amtCol]);
               const hit = tryMatch(descRaw);
               if (hit) mc++;
               results.push({
                 description: descRaw,
                 amount,
+                manualAmount: "",
                 matchedLineItemId: hit?.lineItemId ?? null,
                 manualLineItemId: "",
               });
@@ -216,7 +247,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
           const stratB: ExcelExtractedItem[] = rowHits.map(({ lineItemId, description, numericCols }) => {
             const preferred = numericCols.find(({ col }) => col === bestCol);
             const amount = preferred?.val ?? numericCols[numericCols.length - 1]?.val ?? 0;
-            return { description, amount, matchedLineItemId: lineItemId, manualLineItemId: "" };
+            return { description, amount, manualAmount: "", matchedLineItemId: lineItemId, manualLineItemId: "" };
           });
 
           // Prefer Strategy A if it found a header (gives us unmatched rows too).
@@ -271,9 +302,13 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
       for (const excelItem of excelItems) {
         const targetId = excelItem.matchedLineItemId ?? (excelItem.manualLineItemId || null);
         if (!targetId) continue;
+        const amount = excelItem.amount > 0
+          ? excelItem.amount
+          : parseFloat(excelItem.manualAmount) || 0;
+        if (amount <= 0) continue; // skip rows with no amount (parsed or typed)
         const idx = updated.findIndex((it) => it.lineItemId === targetId);
         if (idx >= 0) {
-          updated[idx] = { ...updated[idx], currentAmount: excelItem.amount };
+          updated[idx] = { ...updated[idx], currentAmount: amount };
           applied++;
         }
       }
@@ -1096,7 +1131,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                     <thead>
                       <tr className="border-b border-border bg-muted/20 text-left text-muted-foreground">
                         <th className="py-2 px-3">Description (from Excel)</th>
-                        <th className="py-2 px-3 text-right w-28">Amount</th>
+                        <th className="py-2 px-3 text-right w-32">Amount</th>
                         <th className="py-2 px-3 w-24">Status</th>
                         <th className="py-2 px-3">Budget Line Item</th>
                       </tr>
@@ -1106,10 +1141,29 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                         const matchedItem = excelItem.matchedLineItemId
                           ? items.find((i) => i.lineItemId === excelItem.matchedLineItemId)
                           : null;
+                        const amountMissing = excelItem.amount <= 0;
                         return (
-                          <tr key={idx} className="border-b border-border/50 hover:bg-muted/20">
+                          <tr key={idx} className={`border-b border-border/50 hover:bg-muted/20 ${amountMissing ? "bg-amber-500/5" : ""}`}>
                             <td className="py-1.5 px-3 text-foreground">{excelItem.description}</td>
-                            <td className="py-1.5 px-3 text-right font-medium">{formatCurrency(excelItem.amount)}</td>
+                            <td className="py-1.5 px-3 text-right">
+                              {amountMissing ? (
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  className="w-28 text-right h-7 text-sm ml-auto"
+                                  placeholder="Enter amt"
+                                  value={excelItem.manualAmount}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setExcelItems((prev) =>
+                                      prev.map((p, i) => i === idx ? { ...p, manualAmount: val } : p)
+                                    );
+                                  }}
+                                />
+                              ) : (
+                                <span className="font-medium">{formatCurrency(excelItem.amount)}</span>
+                              )}
+                            </td>
                             <td className="py-1.5 px-3">
                               {matchedItem ? (
                                 <span className="flex items-center gap-1 text-green-500">
@@ -1151,7 +1205,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                   </table>
                 </div>
                 <p className="text-xs text-muted-foreground px-3 py-2 border-t border-border">
-                  Unmatched items without a selection will be skipped
+                  Items with no budget line item or no amount will be skipped. Amber rows need an amount entered.
                 </p>
               </div>
             )}
