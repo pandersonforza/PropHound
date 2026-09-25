@@ -341,14 +341,14 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     });
   };
 
-  // Upload the required pay app PDF to Vercel Blob immediately on selection
+  // Upload the required pay app document to Vercel Blob immediately on selection
   const handleRequiredPdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
 
     if (file.size > 50 * 1024 * 1024) {
-      toast({ title: "File too large", description: "PDF must be under 50 MB", variant: "destructive" });
+      toast({ title: "File too large", description: "File must be under 50 MB", variant: "destructive" });
       return;
     }
 
@@ -469,7 +469,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
 
   const handleSave = async (submitForApproval = false) => {
     if (!requiredPdfUrl) {
-      toast({ title: "Pay app PDF required", description: "Upload the pay application PDF before saving", variant: "destructive" });
+      toast({ title: "Pay app document required", description: "Upload the pay application document before saving", variant: "destructive" });
       return;
     }
 
@@ -680,10 +680,10 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
               </div>
             </div>
 
-            {/* Required PDF attachment */}
+            {/* Required pay app attachment */}
             <div className="space-y-2">
               <Label className="flex items-center gap-1 text-sm font-medium">
-                Pay Application PDF <span className="text-destructive">*</span>
+                Pay Application Document <span className="text-destructive">*</span>
               </Label>
               {requiredPdfUrl ? (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-emerald-500/40 bg-emerald-500/5 text-sm">
@@ -712,14 +712,14 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                   {requiredPdfUploading ? (
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploading...</>
                   ) : (
-                    <><Upload className="h-4 w-4 mr-2" />Upload Pay App PDF</>
+                    <><Upload className="h-4 w-4 mr-2" />Upload Pay App (PDF or Excel)</>
                   )}
                 </Button>
               )}
               <input
                 ref={requiredPdfRef}
                 type="file"
-                accept=".pdf"
+                accept=".pdf,.xlsx,.xls"
                 className="hidden"
                 onChange={handleRequiredPdfSelect}
               />
