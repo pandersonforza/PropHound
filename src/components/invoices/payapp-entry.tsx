@@ -128,43 +128,58 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
 
-        // Pre-scan rows outside setItems so we can diagnose without state
-        let rowsWithAmount = 0;
-        const excelDescs: string[] = [];
-        for (const row of rows) {
-          const descRaw = String(
+        if (rows.length === 0) {
+          toast({ title: "Empty file", description: "No rows found in the Excel file", variant: "destructive" });
+          return;
+        }
+
+        // Auto-detect which column holds descriptions and which holds the billing amount
+        const allKeys = Object.keys(rows[0]);
+        const descKeywords = ["description", "line item", "lineitem", "item", "work", "trade", "scope", "cost code"];
+        const amtKeywords  = ["this period", "thisperiod", "amount", "billing", "current", "billed", "period"];
+
+        const findKey = (keywords: string[]) =>
+          allKeys.find((k) => keywords.some((kw) => k.toLowerCase().includes(kw)));
+
+        const descKey = findKey(descKeywords);
+        const amtKey  = findKey(amtKeywords);
+
+        const getDesc = (row: Record<string, unknown>) => {
+          if (descKey) return String(row[descKey] ?? "").trim();
+          // Last-resort: try every hardcoded name
+          return String(
             row["Line Item"] ?? row["line item"] ?? row["Description"] ??
             row["description"] ?? row["Item"] ?? row["item"] ?? ""
           ).trim();
-          const amountRaw = String(
-            row["This Period"] ?? row["this period"] ?? row["Amount"] ??
-            row["amount"] ?? row["Current"] ?? row["current"] ??
-            row["Billing"] ?? row["billing"] ?? 0
-          );
-          const amount = parseFloat(amountRaw.replace(/[$,\s]/g, "")) || 0;
-          if (descRaw) excelDescs.push(descRaw);
-          if (amount !== 0) rowsWithAmount++;
+        };
+
+        const getAmt = (row: Record<string, unknown>) => {
+          const raw = amtKey
+            ? String(row[amtKey] ?? "0")
+            : String(
+                row["This Period"] ?? row["this period"] ?? row["Amount"] ??
+                row["amount"] ?? row["Current"] ?? row["current"] ??
+                row["Billing"] ?? row["billing"] ?? 0
+              );
+          return parseFloat(raw.replace(/[$,\s]/g, "")) || 0;
+        };
+
+        // Pre-scan to gather diagnostics
+        let rowsWithAmount = 0;
+        const excelDescs: string[] = [];
+        for (const row of rows) {
+          const desc = getDesc(row);
+          const amt  = getAmt(row);
+          if (desc) excelDescs.push(desc);
+          if (amt !== 0) rowsWithAmount++;
         }
 
         let matched = 0;
         setItems((prev) => {
           const updated = [...prev];
           for (const row of rows) {
-            // Accept any plausible column name for the description
-            const descRaw = String(
-              row["Line Item"] ?? row["line item"] ?? row["Description"] ??
-              row["description"] ?? row["Item"] ?? row["item"] ?? ""
-            ).trim();
-
-            // Accept any plausible column name for the amount
-            const amountRaw = String(
-              row["This Period"] ?? row["this period"] ?? row["Amount"] ??
-              row["amount"] ?? row["Current"] ?? row["current"] ??
-              row["Billing"] ?? row["billing"] ?? 0
-            );
-            // Strip currency symbols, commas, spaces before parsing (e.g. "$1,234.56" → 1234.56)
-            const amount = parseFloat(amountRaw.replace(/[$,\s]/g, "")) || 0;
-
+            const descRaw = getDesc(row);
+            const amount  = getAmt(row);
             if (!descRaw || amount <= 0) continue;
 
             const descNorm = normalize(descRaw);
@@ -189,15 +204,16 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
           return updated;
         });
 
-        if (matched === 0 && rows.length > 0) {
+        if (matched === 0) {
           const budgetSample = items.slice(0, 2).map((i) => `"${i.description}"`).join(", ");
-          const excelSample = excelDescs.slice(0, 2).map((d) => `"${d}"`).join(", ");
-          const amountNote = rowsWithAmount === 0
-            ? "⚠️ All amount values are 0 or blank — fill in the Amount column before importing."
-            : `${rowsWithAmount} rows have amounts > 0.`;
+          const excelSample  = excelDescs.slice(0, 2).map((d) => `"${d}"`).join(", ");
+          const headerNote   = `Columns found: ${allKeys.slice(0, 6).map((k) => `"${k}"`).join(", ")}${allKeys.length > 6 ? "…" : ""}.`;
+          const amountNote   = rowsWithAmount === 0
+            ? `No amounts found (amount column: ${amtKey ? `"${amtKey}"` : "not detected"}).`
+            : `${rowsWithAmount} row(s) have amounts > 0.`;
           toast({
-            title: "No matches found",
-            description: `${amountNote} Excel descriptions: ${excelSample || "none"}. Budget descriptions: ${budgetSample || "none"}.`,
+            title: "No line items matched",
+            description: `${headerNote} ${amountNote} Excel descriptions: ${excelSample || "none"}. Budget descriptions: ${budgetSample || "none"}.`,
             variant: "destructive",
           });
         } else {
