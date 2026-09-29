@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,14 @@ interface MilestonesPanelProps {
 
 const PIE_COLORS = ["#10b981", "#64748b"];
 
+interface ReviewMilestone {
+  name: string;
+  description: string;
+  devFee: string;
+  expectedDate: string;
+  include: boolean;
+}
+
 export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,6 +63,11 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewMilestones, setReviewMilestones] = useState<ReviewMilestone[]>([]);
+  const [aiNotes, setAiNotes] = useState("");
+  const [isSavingParsed, setIsSavingParsed] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Dev fee invoice generation
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -245,31 +258,17 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
         return;
       }
 
-      let created = 0;
-      for (let i = 0; i < data.milestones.length; i++) {
-        const m = data.milestones[i];
-        const createRes = await fetch("/api/milestones", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            projectId,
-            name: m.name,
-            description: m.description || null,
-            devFee: m.devFee || 0,
-            expectedDate: m.expectedDate || null,
-            status: "Pending",
-            sortOrder: i,
-          }),
-        });
-        if (createRes.ok) created++;
-      }
-
-      toast({
-        title: "Agreement processed",
-        description: `Created ${created} milestones from the dev agreement.${data.totalDevFee ? ` Total dev fee: ${formatCurrency(data.totalDevFee)}` : ""}`,
-      });
-
-      fetchMilestones();
+      setReviewMilestones(
+        data.milestones.map((m: { name: string; description?: string | null; devFee?: number; expectedDate?: string | null }) => ({
+          name: m.name ?? "",
+          description: m.description ?? "",
+          devFee: String(m.devFee ?? 0),
+          expectedDate: m.expectedDate ?? "",
+          include: true,
+        }))
+      );
+      setAiNotes(data.notes ?? "");
+      setReviewOpen(true);
     } catch (err) {
       toast({
         title: "Error",
@@ -278,6 +277,46 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleConfirmParsedMilestones = async () => {
+    const toCreate = reviewMilestones.filter((m) => m.include);
+    if (toCreate.length === 0) return;
+    setIsSavingParsed(true);
+    try {
+      let created = 0;
+      for (let i = 0; i < toCreate.length; i++) {
+        const m = toCreate[i];
+        const createRes = await fetch("/api/milestones", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId,
+            name: m.name.trim(),
+            description: m.description.trim() || null,
+            devFee: parseFloat(m.devFee) || 0,
+            expectedDate: m.expectedDate || null,
+            status: "Pending",
+            sortOrder: milestones.length + i,
+          }),
+        });
+        if (createRes.ok) created++;
+      }
+      toast({
+        title: "Milestones added",
+        description: `Added ${created} milestone${created !== 1 ? "s" : ""} from the dev agreement.`,
+      });
+      setReviewOpen(false);
+      fetchMilestones();
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to save milestones",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingParsed(false);
     }
   };
 
@@ -382,6 +421,25 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
                     Generate Dev Fee Invoice
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  {uploading ? "Processing..." : "Upload Dev Agreement"}
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={handleUploadAgreement}
+                />
                 <Button
                   onClick={() => {
                     setEditMilestone(undefined);
@@ -578,6 +636,141 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
         onConfirm={handleDelete}
         confirmLabel="Delete"
       />
+
+      {/* Dev Agreement Review Dialog */}
+      <Dialog open={reviewOpen} onOpenChange={(open) => { if (!open && !isSavingParsed) setReviewOpen(false); }}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Review Extracted Milestones</DialogTitle>
+            <DialogDescription>
+              {reviewMilestones.length} milestone{reviewMilestones.length !== 1 ? "s" : ""} found. Edit or remove any before adding them to the project.
+            </DialogDescription>
+          </DialogHeader>
+
+          {aiNotes && (
+            <div className="rounded-md bg-muted/50 border border-border px-3 py-2 text-xs text-muted-foreground">
+              <span className="font-medium">AI note:</span> {aiNotes}
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="space-y-2 pr-1">
+              {reviewMilestones.map((m, i) => (
+                <div
+                  key={i}
+                  className={`rounded-md border p-3 space-y-2 transition-opacity ${m.include ? "border-border" : "border-border/30 opacity-40"}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 rounded border-border shrink-0"
+                      checked={m.include}
+                      onChange={() =>
+                        setReviewMilestones((prev) =>
+                          prev.map((row, j) => j === i ? { ...row, include: !row.include } : row)
+                        )
+                      }
+                    />
+                    <div className="flex-1 grid grid-cols-2 gap-2">
+                      <div className="col-span-2">
+                        <Input
+                          value={m.name}
+                          onChange={(e) =>
+                            setReviewMilestones((prev) =>
+                              prev.map((row, j) => j === i ? { ...row, name: e.target.value } : row)
+                            )
+                          }
+                          placeholder="Milestone name"
+                          className="text-sm font-medium"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          value={m.description}
+                          onChange={(e) =>
+                            setReviewMilestones((prev) =>
+                              prev.map((row, j) => j === i ? { ...row, description: e.target.value } : row)
+                            )
+                          }
+                          placeholder="Description (optional)"
+                          className="text-sm text-muted-foreground"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Dev Fee ($)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={m.devFee}
+                          onChange={(e) =>
+                            setReviewMilestones((prev) =>
+                              prev.map((row, j) => j === i ? { ...row, devFee: e.target.value } : row)
+                            )
+                          }
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Expected Date</Label>
+                        <Input
+                          type="date"
+                          value={m.expectedDate}
+                          onChange={(e) =>
+                            setReviewMilestones((prev) =>
+                              prev.map((row, j) => j === i ? { ...row, expectedDate: e.target.value } : row)
+                            )
+                          }
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="mt-1 text-muted-foreground/50 hover:text-destructive transition-colors"
+                      onClick={() =>
+                        setReviewMilestones((prev) => prev.filter((_, j) => j !== i))
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter className="flex items-center justify-between gap-2 border-t border-border pt-4">
+            <div className="text-sm text-muted-foreground">
+              {reviewMilestones.filter((m) => m.include).length} of {reviewMilestones.length} selected
+              {" — "}
+              <span className="font-medium text-foreground">
+                {formatCurrency(
+                  reviewMilestones
+                    .filter((m) => m.include)
+                    .reduce((s, m) => s + (parseFloat(m.devFee) || 0), 0)
+                )}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setReviewOpen(false)}
+                disabled={isSavingParsed}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmParsedMilestones}
+                disabled={isSavingParsed || reviewMilestones.filter((m) => m.include).length === 0}
+              >
+                {isSavingParsed ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Add {reviewMilestones.filter((m) => m.include).length} Milestone{reviewMilestones.filter((m) => m.include).length !== 1 ? "s" : ""}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dev Fee Invoice Dialog */}
       <Dialog open={invoiceDialogOpen} onOpenChange={(open) => { if (!open) setInvoiceDialogOpen(false); }}>
