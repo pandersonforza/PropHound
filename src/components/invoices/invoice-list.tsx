@@ -70,6 +70,7 @@ export function InvoiceList({
   const [lineItemFilter, setLineItemFilter] = useState<string>(initialLineItemFilter);
   const [unsentFilter, setUnsentFilter] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(!!initialLineItemFilter);
+  const [invoiceSearch, setInvoiceSearch] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPdfExporting, setIsPdfExporting] = useState(false);
   const [viewOverrideStatus, setViewOverrideStatus] = useState("");
@@ -228,8 +229,19 @@ export function InvoiceList({
     return true;
   }), [localInvoices, statusFilter, groupFilter, vendorFilter, lineItemFilter, unsentFilter]);
 
+  // Apply the search-bar filter on top of the dropdown filters so exports match what's visible
+  const exportInvoices = useMemo(() => {
+    if (!invoiceSearch) return filteredInvoices;
+    const q = invoiceSearch.toLowerCase();
+    return filteredInvoices.filter(
+      (inv) =>
+        inv.vendorName?.toLowerCase().includes(q) ||
+        (inv.invoiceNumber?.toLowerCase().includes(q) ?? false)
+    );
+  }, [filteredInvoices, invoiceSearch]);
+
   // Invoices in the current view that have a downloadable PDF
-  const invoicesWithPdf = filteredInvoices.filter(
+  const invoicesWithPdf = exportInvoices.filter(
     (inv) => (inv.invoiceNumber?.startsWith("DF-") && inv.id) || inv.filePath
   );
 
@@ -269,7 +281,7 @@ export function InvoiceList({
   };
 
   const handleExportPdf = async () => {
-    if (!filteredInvoices.length) return;
+    if (!exportInvoices.length) return;
     setIsPdfExporting(true);
     try {
       // Build a human-readable label describing the current filters
@@ -277,12 +289,13 @@ export function InvoiceList({
       if (statusFilter !== "All") parts.push(`Status: ${statusFilter}`);
       if (groupFilter !== "All") parts.push(`Group: ${groupFilter}`);
       if (vendorFilter) parts.push(`Vendor: ${vendorFilter}`);
+      if (invoiceSearch) parts.push(`Search: "${invoiceSearch}"`);
 
       const res = await fetch("/api/invoices/approved-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ids: filteredInvoices.map((inv) => inv.id),
+          ids: exportInvoices.map((inv) => inv.id),
           label: parts.join("  |  "),
         }),
       });
@@ -515,9 +528,9 @@ export function InvoiceList({
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportPdf}
-            disabled={isPdfExporting || filteredInvoices.length === 0}
+            disabled={isPdfExporting || exportInvoices.length === 0}
             className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title={`Export current view to PDF (${filteredInvoices.length} invoice${filteredInvoices.length !== 1 ? "s" : ""})`}
+            title={`Export current view to PDF (${exportInvoices.length} invoice${exportInvoices.length !== 1 ? "s" : ""})`}
           >
             {isPdfExporting
               ? <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -669,6 +682,8 @@ export function InvoiceList({
         data={filteredInvoices}
         searchKeys={["vendorName", "invoiceNumber"]}
         searchPlaceholder="Search by vendor or invoice #..."
+        searchValue={invoiceSearch}
+        onSearchChange={setInvoiceSearch}
       />
 
       <InvoiceUpload

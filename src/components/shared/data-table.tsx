@@ -30,6 +30,8 @@ interface DataTableProps<TData, TValue> {
   searchKey?: string;
   searchKeys?: string[];
   searchPlaceholder?: string;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -38,10 +40,15 @@ export function DataTable<TData, TValue>({
   searchKey,
   searchKeys,
   searchPlaceholder = "Search...",
+  searchValue,
+  onSearchChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = React.useState("");
+  const [internalGlobalFilter, setInternalGlobalFilter] = React.useState("");
+  const isControlled = searchValue !== undefined && onSearchChange !== undefined;
+  const globalFilter = isControlled ? searchValue : internalGlobalFilter;
+  const setGlobalFilter = isControlled ? onSearchChange : setInternalGlobalFilter;
   const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 });
 
   const multiSearchKeys = searchKeys || (searchKey ? [searchKey] : []);
