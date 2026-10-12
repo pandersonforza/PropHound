@@ -92,12 +92,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No PDFs could be generated for the selected invoices' }, { status: 404 });
     }
 
-    const zipped = zipSync(zipFiles, { level: 6 });
+    const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const folderName = `invoices_${dateStr}`;
+
+    // Put all files inside a dated folder within the zip
+    const foldered: Record<string, Uint8Array> = {};
+    for (const [name, data] of Object.entries(zipFiles)) {
+      foldered[`${folderName}/${name}`] = data;
+    }
+
+    const zipped = zipSync(foldered, { level: 6 });
 
     return new NextResponse(zipped, {
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': 'attachment; filename="invoices.zip"',
+        'Content-Disposition': `attachment; filename="${folderName}.zip"`,
       },
     });
   } catch (error) {

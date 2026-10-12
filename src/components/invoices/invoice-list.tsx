@@ -263,7 +263,7 @@ export function InvoiceList({
       const a = document.createElement("a");
       a.href = url;
       // Build a meaningful filename from the active filters
-      const parts = ["invoices"];
+      const parts = ["invoices", new Date().toISOString().slice(0, 10)];
       if (statusFilter !== "All") parts.push(statusFilter.toLowerCase());
       if (groupFilter !== "All") parts.push(groupFilter.toLowerCase().replace(/\s+/g, "-"));
       a.download = `${parts.join("-")}.zip`;
