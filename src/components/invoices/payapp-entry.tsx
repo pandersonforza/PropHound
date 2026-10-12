@@ -74,8 +74,8 @@ interface PayAppEntryProps {
 }
 
 // Normalize a string for comparison: lowercase, strip punctuation, then collapse whitespace
-const normalize = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+const normalize = (s: string | null | undefined) =>
+  String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
 
 export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayAppEntryProps) {
   const { toast } = useToast();
