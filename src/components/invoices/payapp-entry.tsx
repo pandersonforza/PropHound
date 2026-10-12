@@ -133,7 +133,11 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     reader.onload = async (evt) => {
       try {
         const XLSX = await import("xlsx");
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const rawResult = evt.target?.result;
+        if (!rawResult || !(rawResult instanceof ArrayBuffer)) {
+          throw new Error("File could not be read by browser");
+        }
+        const data = new Uint8Array(rawResult);
         const wb = XLSX.read(data, { type: "array" });
 
         const descKeywords = ["description", "line item", "lineitem", "item", "work", "trade", "scope", "cost code", "category"];
@@ -287,9 +291,16 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
             variant: "destructive",
           });
         }
-      } catch {
-        toast({ title: "Import failed", description: "Could not read Excel file", variant: "destructive" });
+      } catch (err) {
+        toast({
+          title: "Import failed",
+          description: err instanceof Error ? err.message : "Could not read Excel file",
+          variant: "destructive",
+        });
       }
+    };
+    reader.onerror = () => {
+      toast({ title: "Import failed", description: "Browser could not read the file", variant: "destructive" });
     };
     reader.readAsArrayBuffer(file);
     e.target.value = "";
