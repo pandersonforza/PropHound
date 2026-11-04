@@ -47,6 +47,36 @@ interface MilestonesPanelProps {
 
 const PIE_COLORS = ["#10b981", "#64748b"];
 
+/** Add `n` calendar days to `base` and return a YYYY-MM-DD string. */
+function addDays(base: Date, n: number): string {
+  const d = new Date(base);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * For the 6 standard milestones, infer an expected date relative to today
+ * so the user doesn't have to set them manually after uploading a dev agreement.
+ *
+ * Timeline (anchored to upload date):
+ *   Retainer            → +14 days
+ *   Travel 1st Half     → +60 days
+ *   Construction Begins → +150 days (~5 months)
+ *   Travel 2nd Half     → +210 days (Construction + 60)
+ *   Construction 50%    → +210 days (Construction + 60)
+ *   Project Complete    → +270 days (50% + 60)
+ */
+function inferMilestoneDate(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("retainer")) return addDays(new Date(), 14);
+  if (/travel.*(1st|first|one|\b1\b)/.test(n)) return addDays(new Date(), 60);
+  if (/construction.*(begin|start)/.test(n) || /begin.*(construction|build)/.test(n)) return addDays(new Date(), 150);
+  if (/travel.*(2nd|second|two|\b2\b)/.test(n)) return addDays(new Date(), 210);
+  if (/50\s*%|50\s*percent|half.*(complet|way|done)/.test(n)) return addDays(new Date(), 210);
+  if (/project.*(complet|finish|done|clos)/.test(n) || /certificate.*occupancy/.test(n) || n.includes("occupancy")) return addDays(new Date(), 270);
+  return "";
+}
+
 interface ReviewMilestone {
   name: string;
   description: string;
@@ -263,7 +293,7 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
           name: m.name ?? "",
           description: m.description ?? "",
           devFee: String(m.devFee ?? 0),
-          expectedDate: m.expectedDate ?? "",
+          expectedDate: inferMilestoneDate(m.name ?? "") || (m.expectedDate ?? ""),
           include: true,
         }))
       );
